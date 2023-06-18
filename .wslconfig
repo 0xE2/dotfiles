@@ -1,0 +1,3 @@
+# https://learn.microsoft.com/en-us/windows/wsl/wsl-config#configure-global-options-with-wslconfig
+[wsl2]
+memory=2GB
