@@ -1,4 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# Update Exegol my-resources directory with the latest copy of dotfiles
+# https://exegol.readthedocs.io/en/latest/exegol-image/my-resources.html
+# Usage: ./exegol_update_my-resources.sh [dotfiles_dir] [exegol_dir]
 
 # Function to check if directories exist
 check_dirs() {

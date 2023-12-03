@@ -1,0 +1,15 @@
+# Check if argument was passed
+if [ "$#" -ne 1 ]; then
+    echo "You must provide a Windows-style path as an argument."
+    return 1
+fi
+
+# Extract the drive letter and convert to lowercase
+local drive=$(echo "${1:0:1}" | tr '[:upper:]' '[:lower:]')
+
+# Strip drive letter and colon, then replace backslashes with forward slashes
+local path=${1:2}
+path=${path//\\//}
+
+# Construct Wsl-style path
+echo "/mnt/$drive$path"
