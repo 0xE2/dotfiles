@@ -21,7 +21,6 @@ https://zsh.sourceforge.io/Doc/Release/Files.html#Files
 zsh -d -f -i # run in debug mode, don't load any config files, run interactively
 
 chsh -s $(which zsh)
-mkdir ~/.config/zsh
 
 cat .zshenv | sudo tee -a /etc/zsh/zshenv
     OR, as root
@@ -37,6 +36,14 @@ ln -s "$(pwd)/.config/zsh" $ZDOTDIR
     - https://www.nerdfonts.com/
 - https://github.com/zsh-users/zsh-autosuggestions
 - https://github.com/zsh-users/zsh-history-substring-search
+
+### Tmux
+
+```
+mkdir $XDG_CONFIG_HOME/tmux
+ln -s $(pwd)/.config/tmux/tmux.conf $XDG_CONFIG_HOME/tmux/tmux.conf
+git clone https://github.com/tmux-plugins/tpm $XDG_CONFIG_HOME/tmux/plugins/tpm
+```
 
 
 ## Podman
