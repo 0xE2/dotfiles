@@ -37,6 +37,7 @@ fpath=("$ZDOTDIR/functions" "${fpath[@]}")
 # man zshzle (https://zsh.sourceforge.io/Doc/Release/Zsh-Line-Editor.html) -> STANDARD WIDGETS section
 # sed -n l will show you the characters that are being typed
 # zmodload zsh/terminfo
+# https://github.com/romkatv/zsh4humans/blob/bb139177bced8338e99e78380b2932b1a9c32209/fn/-z4h-init#L319 | some of default bindings
 bindkey -e                                        # emacs key bindings
 # bindkey ' ' magic-space                           # do history expansion on space
 bindkey '^U' backward-kill-line                   # ctrl + U
@@ -51,6 +52,7 @@ bindkey '^[[F' end-of-line                        # end
 bindkey '^[[Z' undo                               # shift + tab undo last action
 
 # Just '^[[A' / '^[[B' doesn't work for me
+# https://invisible-island.net/ncurses/man/user_caps.5.html#h3-Extended-key-definitions
 bindkey "$terminfo[kcuu1]" history-substring-search-up   # up arrow
 bindkey "$terminfo[kcud1]" history-substring-search-down # down arrow
 bindkey -M vicmd 'k' history-substring-search-up
@@ -98,6 +100,8 @@ fi
 
 # https://thevaluable.dev/zsh-completion-guide-examples/
 # run-help autoload / man zshmisc -> AUTOLOADING FUNCTIONS
+# man zshbuiltins -> search autoload
+# https://www.reddit.com/r/zsh/comments/13sy6z6/understanding_autoload_x/
 autoload -Uz compinit
 compinit -d ~/.cache/zcompdump
 zstyle ':completion:*:*:*:*:*' menu select  # navigate completions using the arrow keys
@@ -141,3 +145,6 @@ fi
 source ~/.profile
 
 autoload -Uz win_to_wsl_path
+autoload -Uz get_tunnel_ipv4
+
+export DOCKER_HOST=unix://mnt/wsl/podman-sockets/podman-machine-default/podman-root.sock
