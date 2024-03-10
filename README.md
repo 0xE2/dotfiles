@@ -45,16 +45,19 @@ ln -s $(pwd)/.config/tmux/tmux.conf $XDG_CONFIG_HOME/tmux/tmux.conf
 git clone https://github.com/tmux-plugins/tpm $XDG_CONFIG_HOME/tmux/plugins/tpm
 ```
 
+## Python
+
+- https://github.com/pyenv/pyenv#basic-github-checkout
 
 ## Podman
 
 1. Install Podman on Windows, create machine -> creates another WSL distribution
 2. Install Podman on WSL2 from `podman-remote-static-linux_amd64.tar.gz`
 3. Copy `%APPDATA%\containers\containers.conf` and SSH key from Windows to WSL2 `$HOME/.config/containers/containers.conf`
-3a. Use key from Windows in WSL2:
+    * Use key from Windows in WSL2:
 
 ``` Bash
-podman system connection add podman-machine-default-root --default --identity /mnt/c/Users/$WIN_USER/.ssh/podman-machine-default ssh://root@127.0.0.1:56427/run/podman/podman.sock
+podman system connection add podman-machine-default-root --default --identity /mnt/c/Users/$WIN_USER/.ssh/podman-machine-default ssh://root@127.0.0.1:$PORT/run/podman/podman.sock
 ```
 
 ## Inspired by

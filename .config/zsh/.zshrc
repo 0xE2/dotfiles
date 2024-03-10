@@ -23,6 +23,8 @@ WORDCHARS=${WORDCHARS//\/}
 PROMPT_EOL_MARK=""
 
 export PATH=~/.local/bin:/usr/local/go/bin:$PATH:~/bin
+export PYENV_ROOT="$HOME/.pyenv"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 fpath=("$ZDOTDIR/functions" "${fpath[@]}")
 
 
@@ -141,8 +143,7 @@ fi
 # Other
 ####################################################################################################
 
-# exporting get_tunnel_ip()
-source ~/.profile
+eval "$(pyenv init -)"
 
 autoload -Uz win_to_wsl_path
 autoload -Uz get_tunnel_ipv4
