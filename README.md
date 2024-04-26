@@ -24,10 +24,12 @@ chsh -s $(which zsh)
 
 cat .zshenv | sudo tee -a /etc/zsh/zshenv
     OR, as root
+source ./scripts/append_custom_config.sh
 content=$(cat .zshenv)
 update_config /etc/zsh/zshenv $content
 
-ln -s "$(pwd)/.config/zsh" $ZDOTDIR
+# ZDOTDIR env var isn't exported from global zshenv because directory is not yet linked
+ln -s "$(pwd)/.config/zsh" ~/.config/zsh
 ```
 
 ### Plugins

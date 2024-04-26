@@ -1,5 +1,6 @@
 () {
   local ZPLUGINDIR=/etc/zsh/plugins
+  # local ZPLUGINDIR=$HOME/.local/zsh-plugins
 
   # Check if the plugin directory exists
   if [ ! -d "${ZPLUGINDIR}" ]; then
