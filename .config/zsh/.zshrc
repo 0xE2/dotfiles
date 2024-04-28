@@ -5,6 +5,10 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
+# Check if we're on QubesOS. We're most likely in AppVM, so let's indicate to
+# our scripts to use non-volatile directories
+[[ -f "/usr/share/qubes/marker-vm" ]] && export LIMIT_TO_USER_DIRS=true
+
 [ -f "${ZDOTDIR}/aliasrc.zsh" ] && source "${ZDOTDIR}/aliasrc.zsh"
 [ -f "${ZDOTDIR}/optionrc.zsh" ] && source "${ZDOTDIR}/optionrc.zsh"
 [ -f "${ZDOTDIR}/pluginrc.zsh" ] && source "${ZDOTDIR}/pluginrc.zsh"
@@ -22,7 +26,7 @@ WORDCHARS=${WORDCHARS//\/}
 # hide EOL sign ('%')
 PROMPT_EOL_MARK=""
 
-export PATH=~/.local/bin:/usr/local/go/bin:$PATH:~/bin
+export PATH=~/.local/bin:~/bin:/usr/local/go/bin:$PATH
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 fpath=("$ZDOTDIR/functions" "${fpath[@]}")
@@ -86,7 +90,7 @@ if [ -x /usr/bin/dircolors ]; then
     export LESS_TERMCAP_md=$'\E[1;36m'     # begin bold
     export LESS_TERMCAP_me=$'\E[0m'        # reset bold/blink
     export LESS_TERMCAP_so=$'\E[01;43;34m' # begin highlight
-    export LESS_TERMCAP_se=$'\E[0m'        # reset hightligh
+    export LESS_TERMCAP_se=$'\E[0m'        # reset highlight
     export LESS_TERMCAP_us=$'\E[1;32m'     # begin underline
     export LESS_TERMCAP_ue=$'\E[0m'        # reset underline
     export LESS=-R # allows raw control characters only for colors to be displayed
@@ -143,7 +147,12 @@ fi
 # Other
 ####################################################################################################
 
-eval "$(pyenv init -)"
+# Continue Python init
+if [[ -d $PYENV_ROOT/bin ]]; then
+  eval "$(pyenv init -)"
+  export PIP_REQUIRE_VIRTUALENV=true
+  # PIPX_DEFAULT_PYTHON
+fi
 
 autoload -Uz win_to_wsl_path
 autoload -Uz get_tunnel_ipv4

@@ -1,12 +1,14 @@
 () {
-  local ZPLUGINDIR=/etc/zsh/plugins
-  # local ZPLUGINDIR=$HOME/.local/zsh-plugins
+  if [[ "$LIMIT_TO_USER_DIRS" == "true" ]]; then
+    ZPLUGINDIR="$HOME/.local/share/zsh-plugins"
+  else
+    ZPLUGINDIR="/etc/zsh/plugins"
+  fi
 
   # Check if the plugin directory exists
   if [ ! -d "${ZPLUGINDIR}" ]; then
     echo "Plugin directory ${ZPLUGINDIR} does not exist."
-    echo "Please create it manually with 'sudo mkdir -p ${ZPLUGINDIR}; sudo chown -R $(whoami):$(whoami) ${ZPLUGINDIR}'"
-    return 1
+    mkdir "$ZPLUGINDIR" || {echo "Please create it manually with 'sudo mkdir -p ${ZPLUGINDIR}; sudo chown -R $(whoami):$(whoami) ${ZPLUGINDIR}'"; return 1}
   fi
 
   apply() {

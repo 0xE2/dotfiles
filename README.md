@@ -47,9 +47,28 @@ ln -s $(pwd)/.config/tmux/tmux.conf $XDG_CONFIG_HOME/tmux/tmux.conf
 git clone https://github.com/tmux-plugins/tpm $XDG_CONFIG_HOME/tmux/plugins/tpm
 ```
 
+### Terminals
+
+xfce4-terminal
+```shell
+_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/xfce4/terminal"
+terminalrc="$_config_dir/terminalrc"
+if [ ! -f "$terminalrc" ]; then
+    mkdir -p _config_dir
+    echo "[Configuration]" > "$terminalrc"
+    echo "FontName=MesloLGS NF 12" >> "$terminalrc"
+else
+    echo "$terminalrc already exists"
+    sed -i 's/^FontName=.*/FontName=MesloLGS NF 12/' "$terminalrc"
+fi
+```
+
 ## Python
 
-- https://github.com/pyenv/pyenv#basic-github-checkout
+_pyenv + pipenv + pipx:_
+
+- https://github.com/pyenv/pyenv#automatic-installer
+- in zsh: `PIP_REQUIRE_VIRTUALENV=false pip install pipenv pipx`
 
 ## Podman
 
