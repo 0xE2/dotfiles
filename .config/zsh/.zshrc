@@ -26,7 +26,7 @@ WORDCHARS=${WORDCHARS//\/}
 # hide EOL sign ('%')
 PROMPT_EOL_MARK=""
 
-export PATH=~/.local/bin:~/bin:/usr/local/go/bin:$PATH
+export PATH=~/.local/bin:~/bin:~/go/bin:/usr/local/go/bin:$PATH
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 fpath=("$ZDOTDIR/functions" "${fpath[@]}")
@@ -154,7 +154,6 @@ if [[ -d $PYENV_ROOT/bin ]]; then
   # PIPX_DEFAULT_PYTHON
 fi
 
-autoload -Uz win_to_wsl_path
 autoload -Uz get_tunnel_ipv4
 
 export DOCKER_HOST=unix://mnt/wsl/podman-sockets/podman-machine-default/podman-root.sock
