@@ -1,10 +1,7 @@
 
 # Set custom config directory
 
-if [[ -z "$XDG_CONFIG_HOME" ]]
-then
-    export XDG_CONFIG_HOME="$HOME/.config"
-fi
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 if [[ -d "$XDG_CONFIG_HOME/zsh" ]]
 then
