@@ -13,7 +13,7 @@ log()    { echo "➤ $*"; }
 is_nixos(){ [[ -f /etc/NIXOS ]]; }
 link() {
   local src=$1 dest=$2
-  mkdir -p "$(dirname "$dest")"
+  mkdir --parents "$(dirname "$dest")"
   if [[ -L $dest ]]; then
     if [[ "$(readlink "$dest")" == "$src" ]]; then
       log "Skip: $dest already → $src"
@@ -25,7 +25,7 @@ link() {
     mv "$dest" "$dest".backup."$(date +%s)"
     log "Backed up existing $dest"
   fi
-  ln -s "$src" "$dest"
+  ln --symbolic "$src" "$dest"
   log "Linked $dest → $src"
 }
 
@@ -45,7 +45,8 @@ install_zsh() {
     log "Not a NixOS: updating /etc/zsh/zshenv"
     append_global_zsh
   else
-    log "NixOS detected: skipping global zshenv"
+    log "NixOS detected: updating ~/.zshenv instead of global one"
+    link "$DOTFILES_DIR/.zshenv" "$HOME/.zshenv"
   fi
 }
 
@@ -99,6 +100,8 @@ fi
 ## Run them (dedupe)
 for mod in $(printf "%s\n" "${selected[@]}" | sort -u); do
   "${MODULES[$mod]}"
+  # Print a separator for half of the cols length
+  printf '%*s\n' "$((${COLUMNS:-$(tput cols)} / 2))" '' | tr ' ' -
 done
 
 log "Done."

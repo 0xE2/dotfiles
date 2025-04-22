@@ -8,6 +8,8 @@ fi
 # Check if we're on QubesOS. We're most likely in AppVM, so let's indicate to
 # our scripts to use non-volatile directories
 [[ -f "/usr/share/qubes/marker-vm" ]] && export LIMIT_TO_USER_DIRS=true
+# Same for NixOS as it doesn't follow the FHS standard
+[[ -f "/etc/NIXOS" ]] && export LIMIT_TO_USER_DIRS=true
 
 [ -f "${ZDOTDIR}/aliasrc.zsh" ] && source "${ZDOTDIR}/aliasrc.zsh"
 [ -f "${ZDOTDIR}/optionrc.zsh" ] && source "${ZDOTDIR}/optionrc.zsh"

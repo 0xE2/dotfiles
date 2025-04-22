@@ -12,19 +12,19 @@
   fi
 
   apply() {
-    github=$1
-    plugin=$2
+    github_org=$1
+    plugin_name=$2
     
-    if [ ! -d "${ZPLUGINDIR}/${plugin}" ]; then
-      echo "WARNING: ${plugin} not found. Installing..."
-      git clone "https://www.github.com/${github}/${plugin}" "${ZPLUGINDIR}/${plugin}"
-      echo "SUCCESS: ${plugin} installed!"
+    if [ ! -d "${ZPLUGINDIR}/${plugin_name}" ]; then
+      echo "WARNING: ${plugin_name} not found. Installing..."
+      git clone "https://github.com/${github_org}/${plugin_name}" "${ZPLUGINDIR}/${plugin_name}"
+      echo "SUCCESS: ${plugin_name} installed!"
     fi
     
-    if [ "${plugin}" = "powerlevel10k" ]; then
-      source "${ZPLUGINDIR}/${plugin}/${plugin}.zsh-theme"
+    if [ "${plugin_name}" = "powerlevel10k" ]; then
+      source "${ZPLUGINDIR}/${plugin_name}/${plugin_name}.zsh-theme"
     else
-      source "${ZPLUGINDIR}/${plugin}/${plugin}.plugin.zsh"
+      source "${ZPLUGINDIR}/${plugin_name}/${plugin_name}.plugin.zsh"
     fi
   }
 
