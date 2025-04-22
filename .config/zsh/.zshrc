@@ -27,8 +27,15 @@ WORDCHARS=${WORDCHARS//\/}
 PROMPT_EOL_MARK=""
 
 export PATH=~/.local/bin:~/bin:~/go/bin:/usr/local/go/bin:$PATH
+
+# Prefer [[ in zsh/bash scripts for robustness and readability
 export PYENV_ROOT="$HOME/.pyenv"
-[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+[[ -d "$PYENV_ROOT/bin" ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+
+# Krew is the package manager for kubectl plugins
+KREW_ROOT="${KREW_ROOT:-$HOME/.krew}"
+[[ -d "$KREW_ROOT/bin" ]] && export PATH="$KREW_ROOT/bin:$PATH"
+
 fpath=("$ZDOTDIR/functions" "${fpath[@]}")
 
 
@@ -153,6 +160,9 @@ if [[ -d $PYENV_ROOT/bin ]]; then
   export PIP_REQUIRE_VIRTUALENV=true
   # PIPX_DEFAULT_PYTHON
 fi
+
+export NVM_DIR="$HOME/.config/nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
 autoload -Uz get_tunnel_ipv4
 
