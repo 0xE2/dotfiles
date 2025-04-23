@@ -70,7 +70,6 @@ verify_downloader() {
 
     # Set verified executable as our downloader program and return success
     DOWNLOADER=$1
-    info "Using downloader: ${DOWNLOADER}"
     return 0
 }
 
@@ -138,9 +137,9 @@ setup_tmp() {
 
 # Find version from Github metadata
 github_get_release_version() {
-    local tool_version=${1}
+    local tool_version=${1} raw_tag semver
     if [[ -n "${tool_version}" ]]; then
-      SUFFIX_URL="tags/v${tool_version}"
+      SUFFIX_URL="tags/${tool_version}"
     else
       SUFFIX_URL="latest"
     fi
@@ -150,8 +149,19 @@ github_get_release_version() {
     info "Downloading metadata ${METADATA_URL}"
     github_download "${TMP_METADATA}" "${METADATA_URL}"
 
-    RELEASE_VERSION=$(grep '"tag_name":' "${TMP_METADATA}" | sed -E 's/.*"([^"]+)".*/\1/' | cut -c 2-)
+    raw_tag=$(grep '"tag_name":' "${TMP_METADATA}" | sed -E 's/.*"([^"]+)".*/\1/')
+    RELEASE_VERSION="${raw_tag}"
     export RELEASE_VERSION
+
+    semver=$(echo "${RELEASE_VERSION}" \
+            | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' \
+            | head -n1)
+    if [[ -z "${semver}" ]]; then
+        fatal "Unable to parse semantic version from '${RELEASE_VERSION}'"
+    fi
+    RELEASE_SEMVER="${semver}"
+    export RELEASE_SEMVER
+
     # BIN_FILE=$(echo "${BIN_FILE_TPL}" | envsubst)
     BIN_FILE=$(replace_env_variables "${BIN_FILE_TPL}")
     if [[ -n "${RELEASE_VERSION}" ]]; then
@@ -221,7 +231,7 @@ github_download_hash() {
     if [[ "${SKIP_HASH_CHECK}" -eq 1 ]]; then
         return
     fi
-    HASH_URL_TPL="https://github.com/${GITHUB_REPO}/releases/download/v${RELEASE_VERSION}/${HASH_FILE_TPL}"
+    HASH_URL_TPL="https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_VERSION}/${HASH_FILE_TPL}"
     # HASH_URL=$(echo "$HASH_URL_TPL" | envsubst)
     HASH_URL=$(replace_env_variables "${HASH_URL_TPL}")
 
@@ -233,7 +243,7 @@ github_download_hash() {
 
 # Download binary from Github URL
 github_download_binary() {
-    BIN_URL="https://github.com/${GITHUB_REPO}/releases/download/v${RELEASE_VERSION}/${BIN_FILE}"
+    BIN_URL="https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_VERSION}/${BIN_FILE}"
     info "Downloading binary ${BIN_URL}"
     github_download "${TMP_BIN}" "${BIN_URL}"
 }
@@ -270,7 +280,6 @@ compute_sha256sum() {
 
 # Verify downloaded binary hash
 verify_binary() {
-    # info "Verifying binary download"
     HASH_BIN=$(compute_sha256sum "${TMP_BIN}")
     HASH_BIN=${HASH_BIN%%[[:blank:]]*}
     if [[ "${HASH_EXPECTED}" != "${HASH_BIN}" ]]; then
@@ -282,25 +291,66 @@ verify_binary() {
 
 # Setup permissions and move binary
 setup_binary() {
+    mv_or_sudo() {
+        local src=$1 dst=$2
+        if [[ -w $(dirname "$dst") ]]; then
+            mv -f "$src" "$dst"
+        else
+            warn "Need sudo to write to ${dst}"
+            sudo mv -f "$src" "$dst"
+        fi
+    }
+
     # local dest=${1:-"${BIN_DIR}/${TOOL_NAME}"}
     local dest=${1:-"${BIN_DIR}"}
     chmod 755 "${TMP_BIN}"
     info "Installing ${TOOL_NAME} to ${dest}"
     tar -xzof "${TMP_BIN}" -C "${TMP_DIR}"
 
-    local CMD_MOVE="mv -f \"${TMP_DIR}/${TOOL_NAME}\" \"${dest}\""
-    if [[ -w "${dest}" ]]; then
-        eval "${CMD_MOVE}"
+    # list unique top‑level entries in the archive
+    mapfile -t entries < <(
+      tar -tzf "${TMP_BIN}" |
+      awk -F/ '{print $1}' |
+      sort -u
+    )
+
+    [[ -e "${dest}" ]] || mkdir -p "${dest}"
+
+    if [[ ${#entries[@]} -eq 1 ]]; then
+        local name="${entries[0]}"
+        # a) single directory case
+        if [[ -d "${TMP_DIR}/${name}" ]]; then
+            mv_or_sudo "${TMP_DIR}/${name}" "${dest}/${name}"
+            info "Installed directory ${name}"
+            return
+        fi
+        # b) single file case
+        if [[ -f "${TMP_DIR}/${name}" ]]; then
+            # if it’s not named exactly $TOOL_NAME, rename it
+            local target_name="${name##*/}"
+            [[ "${target_name}" != "${TOOL_NAME}" ]] && target_name="${TOOL_NAME}"
+            mv_or_sudo "${TMP_DIR}/${name}" "${dest}/${target_name}"
+            info "Installed binary ${target_name}"
+            return
+        fi
     else
-        warn "Target directory not writable, trying with sudo"
-        eval "sudo ${CMD_MOVE}"
+        # c) multiple files case
+        fatal "Archive contains multiple top-level entries: ${entries[*]}"
     fi
 
-    if [[ -x "$(command -v "${TOOL_NAME}")" ]]; then
-        info "Installed ${TOOL_NAME} successfully"
-    else
-        fatal "Unable to locate ${TOOL_NAME}"
-    fi
+    # local CMD_MOVE="mv -f \"${TMP_DIR}/${TOOL_NAME}\" \"${dest}\""
+    # if [[ -w "${dest}" ]]; then
+    #     eval "${CMD_MOVE}"
+    # else
+    #     warn "Target directory not writable, trying with sudo"
+    #     eval "sudo ${CMD_MOVE}"
+    # fi
+
+    # if [[ -x "$(command -v "${TOOL_NAME}")" ]]; then
+    #     info "Installed ${TOOL_NAME} successfully"
+    # else
+    #     fatal "Unable to locate ${TOOL_NAME}"
+    # fi
 }
 
 # EXAMPLE: Run the install process
