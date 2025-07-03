@@ -38,7 +38,7 @@ export PYENV_ROOT="$HOME/.pyenv"
 KREW_ROOT="${KREW_ROOT:-$HOME/.krew}"
 [[ -d "$KREW_ROOT/bin" ]] && export PATH="$KREW_ROOT/bin:$PATH"
 
-fpath=("$ZDOTDIR/functions" "${fpath[@]}")
+fpath=("$ZDOTDIR/completions" "$ZDOTDIR/functions" "${fpath[@]}")
 
 
 ####################################################################################################
@@ -117,8 +117,17 @@ fi
 # run-help autoload / man zshmisc -> AUTOLOADING FUNCTIONS
 # man zshbuiltins -> search autoload
 # https://www.reddit.com/r/zsh/comments/13sy6z6/understanding_autoload_x/
+# -U - suppress alias expansion during reading
+# -z - mark the function to be autoloaded using the zsh style
+export ZSH_COMPDUMP=$HOME/.cache/zcompdump
 autoload -Uz compinit
 compinit -d ~/.cache/zcompdump
+
+# Taken from the gcloud completion.zsh.inc,
+# without it "complete" is not found
+autoload -U +X bashcompinit && bashcompinit
+zmodload -i zsh/parameter
+
 zstyle ':completion:*:*:*:*:*' menu select  # navigate completions using the arrow keys
 zstyle ':completion:*' auto-description 'specify: %d'
 zstyle ':completion:*' completer _expand _complete
@@ -134,6 +143,14 @@ zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
 
 # Setup completion scripts in interactive shells
 
+# touch ~/.zshrc
+# vault -autocomplete-install
+# terraform -install-autocomplete
+
+# Without `setopt completealiases` zsh expands alias before completion, so apart from creating aliases
+# you should also wire the completer to the expanded alias
+compdef _kubectx kubectl-ctx
+compdef _kubens kubectl-ns
 
 ####################################################################################################
 # Set up config for plugins
