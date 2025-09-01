@@ -184,5 +184,6 @@ export NVM_DIR="$HOME/.config/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
 autoload -Uz get_tunnel_ipv4
+autoload -Uz mitmproxy-env
 
 export DOCKER_HOST=unix://mnt/wsl/podman-sockets/podman-machine-default/podman-root.sock
