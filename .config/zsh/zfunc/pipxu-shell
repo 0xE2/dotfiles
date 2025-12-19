@@ -1,0 +1,27 @@
+#!/usr/bin/env zsh
+# Zsh function: activate a pipxu-managed venv for a given package
+pipxu-shell() {
+  emulate -L zsh
+
+  local pkg="$1"
+  if [[ -z "$pkg" ]]; then
+    print -u2 "usage: pipxu-shell <package-name>"
+    return 2
+  fi
+
+  local venv_path
+  venv_path="$(pipxu venv --path-full "$pkg" 2>/dev/null | tail -n 1)"
+
+  if [[ -z "$venv_path" ]]; then
+    print -u2 "pipxu-shell: couldn't resolve venv path for: $pkg"
+    return 1
+  fi
+
+  local activate_script="${venv_path}/bin/activate"
+  if [[ ! -f "$activate_script" ]]; then
+    print -u2 "pipxu-shell: activate script not found: $activate_script"
+    return 1
+  fi
+
+  source "$activate_script"
+}

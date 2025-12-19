@@ -45,7 +45,7 @@ export PYENV_ROOT="$HOME/.pyenv"
 KREW_ROOT="${KREW_ROOT:-$HOME/.krew}"
 [[ -d "$KREW_ROOT/bin" ]] && export PATH="$KREW_ROOT/bin:$PATH"
 
-fpath=("$ZDOTDIR/completions" "$ZDOTDIR/functions" "${fpath[@]}")
+fpath=("$ZDOTDIR/completions" "$ZDOTDIR/zfunc" "${fpath[@]}")
 
 
 ####################################################################################################
@@ -206,6 +206,7 @@ export NVM_DIR="$HOME/.config/nvm"
 
 autoload -Uz get_tunnel_ipv4
 autoload -Uz mitmproxy-env
+autoload -Uz pipxu-shell
 
 if (( $+commands[podman] )) && (( $+commands[wslinfo] )); then
   export DOCKER_HOST=unix://mnt/wsl/podman-sockets/podman-machine-default/podman-root.sock
