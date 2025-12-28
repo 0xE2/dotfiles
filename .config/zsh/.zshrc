@@ -162,6 +162,10 @@ if (( $+commands[kubectl] )); then
   compdef __start_kubectl k
 fi
 
+if (( $+commands[aqua] )); then
+  source <(aqua completion zsh)
+fi
+
 # Without `setopt completealiases` zsh expands alias before completion, so apart from creating aliases
 # you should also wire the completer to the expanded alias
 compdef _kubectx kubectl-ctx
