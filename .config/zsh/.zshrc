@@ -35,6 +35,7 @@ export PATH=~/.local/bin:~/bin:~/go/bin:/usr/local/go/bin:$PATH
 # aqua is a declarative CLI version manager
 if (( $+commands[aqua] )); then
   export PATH="$(aqua root-dir)/bin:$PATH"
+  [[ -f "$XDG_CONFIG_HOME/aquaproj-aqua/aqua.yaml" ]] && export AQUA_GLOBAL_CONFIG="$XDG_CONFIG_HOME/aquaproj-aqua/aqua.yaml"
 fi
 
 export PYENV_ROOT="$HOME/.pyenv"
