@@ -13,3 +13,5 @@ registries:
 packages:
   - name: junegunn/fzf@v0.67.0
   - name: astral-sh/uv@0.9.18
+  - import: devops.yaml
+  - import: selfhost.yaml
