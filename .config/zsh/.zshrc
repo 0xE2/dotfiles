@@ -31,6 +31,12 @@ PROMPT_EOL_MARK=""
 export PATH=~/.local/bin:~/bin:~/go/bin:/usr/local/go/bin:$PATH
 
 # Prefer [[ in zsh/bash scripts for robustness and readability
+
+# aqua is a declarative CLI version manager
+if (( $+commands[aqua] )); then
+  export PATH="$(aqua root-dir)/bin:$PATH"
+fi
+
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d "$PYENV_ROOT/bin" ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 
@@ -143,9 +149,18 @@ zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
 
 # Setup completion scripts in interactive shells
 
-# touch ~/.zshrc
-# vault -autocomplete-install
-# terraform -install-autocomplete
+if (( $+commands[uv] )); then
+  eval "$(uv generate-shell-completion zsh)"
+fi
+
+if (( $+commands[uvx] )); then
+  eval "$(uvx --generate-shell-completion zsh)"
+fi
+
+if (( $+commands[kubectl] )); then
+  source <(kubectl completion zsh)
+  compdef __start_kubectl k
+fi
 
 # Without `setopt completealiases` zsh expands alias before completion, so apart from creating aliases
 # you should also wire the completer to the expanded alias
@@ -182,6 +197,7 @@ fi
 
 export NVM_DIR="$HOME/.config/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
 autoload -Uz get_tunnel_ipv4
 autoload -Uz mitmproxy-env
