@@ -1,0 +1,3 @@
+packages:
+  - name: getsops/sops@v3.11.0
+  - name: FiloSottile/age@v1.3.1

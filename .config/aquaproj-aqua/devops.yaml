@@ -1,0 +1,4 @@
+packages:
+  - name: ahmetb/kubectx@v0.9.5
+  - name: ahmetb/kubectx/kubens@v0.9.5
+  - name: derailed/k9s@v0.50.16
