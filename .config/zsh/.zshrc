@@ -202,4 +202,6 @@ export NVM_DIR="$HOME/.config/nvm"
 autoload -Uz get_tunnel_ipv4
 autoload -Uz mitmproxy-env
 
-export DOCKER_HOST=unix://mnt/wsl/podman-sockets/podman-machine-default/podman-root.sock
+if (( $+commands[podman] )) && (( $+commands[wslinfo] )); then
+  export DOCKER_HOST=unix://mnt/wsl/podman-sockets/podman-machine-default/podman-root.sock
+fi
