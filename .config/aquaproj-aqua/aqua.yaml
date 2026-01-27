@@ -11,7 +11,16 @@ registries:
   - type: standard
     ref: v4.448.1 # renovate: depName=aquaproj/aqua-registry
 packages:
+  # Core
   - name: junegunn/fzf@v0.67.0
   - name: astral-sh/uv@0.9.18
-  - import: devops.yaml
-  - import: selfhost.yaml
+  # DevOps
+  - name: ahmetb/kubectx@v0.9.5
+  - name: ahmetb/kubectx/kubens@v0.9.5
+  - name: derailed/k9s@v0.50.16
+  # Self-hosted
+  - name: getsops/sops@v3.11.0
+  - name: FiloSottile/age@v1.3.1
+  - name: restic/restic@v0.18.1
+  # Other
+  - name: asciinema/asciinema@v3.0.1

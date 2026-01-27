@@ -47,6 +47,13 @@ ln -s $(pwd)/.config/tmux/tmux.conf $XDG_CONFIG_HOME/tmux/tmux.conf
 git clone https://github.com/tmux-plugins/tpm $XDG_CONFIG_HOME/tmux/plugins/tpm
 ```
 
+### Aqua
+
+```shell
+# Install links for aqua-managed tools
+aqua install --only-link --all
+```
+
 ### Terminals
 
 xfce4-terminal
