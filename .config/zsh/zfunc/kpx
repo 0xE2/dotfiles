@@ -1,0 +1,225 @@
+#!/usr/bin/env zsh
+# kpx - KeePassXC helper
+# Source this file to define the kpx() function (required for -e to import vars).
+# Direct execution prints values; -e falls back to printing (so you can eval).
+
+kpx() {
+  emulate -L zsh
+  setopt localoptions localtraps pipefail noclobber no_aliases  # stay isolated; fail early; keep traps local
+
+  local attr="password"
+  local import_env=0
+  local db=""
+  local entry=""
+  local cli=""
+  local using_windows_cli=0
+  local is_wsl=0
+  local quiet_restore=0
+  local can_import_env=1
+
+  # -e only works when this function runs in the current shell.
+  [[ ${KPX_STANDALONE:-0} -eq 1 ]] && can_import_env=0
+
+  kpx__usage() {
+    cat <<'EOF'
+Usage: kpx [OPTIONS] ENTRY
+Options:
+  -a, --attr STR        Attribute name to retrieve (default: "password")
+  -e, --import-to-env   Treat value as env assignment(s) and export; prints nothing when sourced
+  --db PATH             KeePassXC database path (else KEEPASSXC_DB)
+  -h, --help            Show this help
+
+Notes:
+  - To modify your current shell environment (-e), source this file so kpx is a function.
+  - Under WSL, the Windows KeePassXC CLI is preferred when available.
+Exit codes:
+  2 usage/args | 3 missing deps | 4 db missing | 5 retrieval failure | 6 env parse failure
+Examples:
+  KEEPASSXC_DB=/path/db.kdbx
+  KEEPASSXC_DB='C:\Users\User\db.kdbx'
+  kpx "Group/Entry" # Group should match exactly (do not escape backslashes)
+                    # No whitespace around '/' that separates groups.
+  kpx -a username "Group/Entry"
+  kpx -a env -e "EntryWithEnv"; echo "$EXPORTED_NAME"
+EOF
+  }
+
+  kpx__err() {
+    print -u2 -- "kpx: $*"
+  }
+
+  # option parsing
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -a|--attr)
+        [[ $# -ge 2 ]] || { kpx__err "missing value for $1"; return 2; }
+        attr=$2; shift 2
+        ;;
+      -e|--import-to-env)
+        import_env=1; shift
+        ;;
+      --db)
+        [[ $# -ge 2 ]] || { kpx__err "missing value for --db"; return 2; }
+        db=$2; shift 2
+        ;;
+      -h|--help)
+        kpx__usage; return 0
+        ;;
+      --)
+        shift; break
+        ;;
+      -*)
+        kpx__err "unknown option: $1"; return 2
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  [[ $# -ge 1 ]] || { kpx__err "ENTRY is required"; kpx__usage >&2; return 2; }
+  entry=$1
+
+  if [[ -z $db ]]; then
+    if [[ -n ${KEEPASSXC_DB:-} ]]; then
+      db=$KEEPASSXC_DB
+    else
+      kpx__err "database path not provided; set KEEPASSXC_DB or use --db"
+      return 2
+    fi
+  fi
+
+  # WSL detection: prefer Windows CLI when present.
+  if [[ -n ${WSL_INTEROP:-} ]]; then
+    is_wsl=1
+  else
+    local kernel
+    kernel=$(uname -r 2>/dev/null | tr 'A-Z' 'a-z')
+    [[ $kernel == *microsoft* ]] && is_wsl=1
+  fi
+
+  # Select CLI: KEEPASSXC_CLI overrides; otherwise choose Windows CLI on WSL, else native CLI.
+  if [[ -n ${KEEPASSXC_CLI:-} ]]; then
+    cli=$KEEPASSXC_CLI
+  else
+    if (( is_wsl )); then
+      local win_cli_winpath="C:\\Program Files\\KeePassXC\\keepassxc-cli.exe"
+      if command -v wslpath >/dev/null 2>&1; then
+        local win_cli_wsl
+        win_cli_wsl=$(wslpath -u "$win_cli_winpath" 2>/dev/null)
+        if [[ -n $win_cli_wsl && -f $win_cli_wsl ]]; then
+          cli=$win_cli_wsl
+          using_windows_cli=1
+        fi
+      else
+        kpx__err "wslpath is required under WSL"; return 3
+      fi
+    fi
+    if [[ -z $cli ]] && command -v keepassxc-cli >/dev/null 2>&1; then
+      cli=$(command -v keepassxc-cli)
+    fi
+  fi
+
+  if [[ -z $cli ]]; then
+    kpx__err "keepassxc-cli not found; set KEEPASSXC_CLI or install KeePassXC"
+    return 3
+  fi
+
+  if ! command -v -- "$cli" >/dev/null 2>&1 && [[ ! -x $cli ]]; then
+    kpx__err "CLI not executable: $cli"
+    return 3
+  fi
+
+  # Normalize DB path for chosen CLI (convert between WSL/Linux and Windows paths as needed).
+  local db_check="$db"
+  local db_for_cli="$db"
+  if (( using_windows_cli )); then
+    if [[ $db == [A-Za-z]:\\* || $db == \\\\?\\* ]]; then
+      db_check=$(wslpath -u "$db" 2>/dev/null)
+      [[ -z $db_check ]] && { kpx__err "could not resolve Windows DB path"; return 4; }
+    fi
+    if [[ ! -r $db_check ]]; then
+      kpx__err "database not found or unreadable: $db"
+      return 4
+    fi
+    db_for_cli=$(wslpath -w "$db_check" 2>/dev/null)
+    [[ -z $db_for_cli ]] && { kpx__err "could not convert DB path for Windows CLI"; return 4; }
+  else
+    if [[ ! -r $db_for_cli ]]; then
+      kpx__err "database not found or unreadable: $db_for_cli"
+      return 4
+    fi
+  fi
+
+  # Disable tracing while handling secrets; restore on exit.
+  if [[ -o xtrace ]]; then
+    quiet_restore=1
+    set +o xtrace
+  fi
+  local pass value
+  { # always{} ensures cleanup runs even if we return early.
+    read -r -s "pass?KeePassXC DB password: " || { print -u2; kpx__err "password read interrupted"; return 5; }
+    print -u2
+
+    local -a cmd
+    cmd=("$cli" show -q -s -a "$attr" "$db_for_cli" "$entry")
+
+    if ! value=$(printf '%s\n' "$pass" | "${cmd[@]}" 2>&1); then
+      kpx__err "${value:-retrieval failed}"
+      return 5
+    fi
+
+    # Normalize line endings and trim trailing newlines/carriage returns.
+    value=${value//$'\r'/}
+    while [[ $value == *$'\n' ]]; do value=${value%$'\n'}; done
+
+    if (( import_env )); then
+      if (( ! can_import_env )); then
+        # standalone mode: cannot touch parent env; fall back to printing
+        printf '%s\n' "$value"
+        return 0
+      fi
+      local parse_ok=1
+      local line name val
+      # Parse env-style lines safely: 'export NAME=val' or 'NAME=val', possibly multiple lines.
+      while IFS= read -r line || [[ -n $line ]]; do
+        line=${line%$'\r'}
+        [[ -z $line ]] && continue
+        line=${line#"${line%%[![:space:]]*}"} # ltrim
+        [[ $line == export\ * ]] && line=${line#export } # drop leading export
+        if [[ $line != *=* ]]; then
+          kpx__err "env line missing '=': $line"
+          parse_ok=0; break
+        fi
+        name=${line%%=*}
+        val=${line#*=}
+        # Trim trailing whitespace, semicolons, or backslashes (line continuations).
+        while [[ $val == *[[:space:]] || $val == *\; || $val == *\\ ]]; do
+          val=${val%?}
+        done
+        while [[ $name == *[[:space:]] ]]; do name=${name%[[:space:]]}; done
+        if [[ $name != [A-Za-z_][A-Za-z0-9_]* ]]; then
+          kpx__err "invalid env var name: $name"
+          parse_ok=0; break
+        fi
+        export "$name=$val"
+      done <<< "$value"
+      if (( ! parse_ok )); then
+        return 6
+      fi
+      return 0
+    fi
+
+    printf '%s\n' "$value"
+  } always {
+    unset -v pass
+    (( quiet_restore )) && set -o xtrace
+  }
+}
+
+# Allow direct execution by uncommenting below; -e will fall back to printing.
+# if [[ "${(%):-%N}" == "$0" ]]; then
+#   KPX_STANDALONE=1
+#   kpx "$@"
+#   exit $?
+# fi
