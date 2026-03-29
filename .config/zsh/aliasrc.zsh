@@ -7,6 +7,7 @@ alias la='ls -A'
 alias l='ls -CF'
 
 alias m='micro'
+alias ts='tailscale'
 alias k='kubectl'
 
 alias kubectx="kubectl-ctx"
