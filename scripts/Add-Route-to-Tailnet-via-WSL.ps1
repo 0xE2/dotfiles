@@ -172,20 +172,52 @@ function Invoke-RouteReset {
         [string]$Mask,
 
         [Parameter(Mandatory)]
-        [string]$Gateway
+        [string]$Gateway,
+
+        [switch]$DeleteExisting
     )
+
+    $deleteExistingLiteral = if ($DeleteExisting) { '$true' } else { '$false' }
 
     $routeScript = @"
 `$ErrorActionPreference = 'Stop'
+`$deleteExisting = $deleteExistingLiteral
 
-do {
-    & route.exe delete $Network mask $Mask *> `$null
-    `$deleteExitCode = `$LASTEXITCODE
-} while (`$deleteExitCode -eq 0)
+function Invoke-RouteExe {
+    param(
+        [Parameter(Mandatory)]
+        [string[]]`$Arguments
+    )
 
-& route.exe add $Network mask $Mask $Gateway *> `$null
-if (`$LASTEXITCODE -ne 0) {
-    throw "route.exe add failed with exit code `$LASTEXITCODE"
+    `$previousErrorActionPreference = `$ErrorActionPreference
+    `$ErrorActionPreference = 'Continue'
+
+    try {
+        `$output = @(& route.exe @Arguments 2>&1)
+        `$exitCode = `$LASTEXITCODE
+    }
+    finally {
+        `$ErrorActionPreference = `$previousErrorActionPreference
+    }
+
+    [pscustomobject]@{
+        ExitCode = `$exitCode
+        Output   = ((`$output | ForEach-Object { [string]`$_ }) -join "`n").Trim()
+    }
+}
+
+if (`$deleteExisting) {
+    `$delete = Invoke-RouteExe -Arguments @('delete', '$Network', 'mask', '$Mask')
+    if (`$delete.ExitCode -ne 0 -and `$delete.Output -notmatch 'Element not found') {
+        `$deleteMessage = if ([string]::IsNullOrWhiteSpace(`$delete.Output)) { "exit code `$(`$delete.ExitCode)" } else { "`$(`$delete.Output) (exit code `$(`$delete.ExitCode))" }
+        throw "route.exe delete failed: `$deleteMessage"
+    }
+}
+
+`$add = Invoke-RouteExe -Arguments @('add', '$Network', 'mask', '$Mask', '$Gateway')
+if (`$add.ExitCode -ne 0) {
+    `$addMessage = if ([string]::IsNullOrWhiteSpace(`$add.Output)) { "exit code `$(`$add.ExitCode)" } else { "`$(`$add.Output) (exit code `$(`$add.ExitCode))" }
+    throw "route.exe add failed: `$addMessage"
 }
 "@
 
@@ -311,7 +343,7 @@ else {
 }
 
 try {
-    Invoke-RouteReset -Network $RouteNetwork -Mask $RouteMask -Gateway $wslIp
+    Invoke-RouteReset -Network $RouteNetwork -Mask $RouteMask -Gateway $wslIp -DeleteExisting:($exactRoutes.Count -gt 0)
     Write-Log "Route successfully updated: $RouteNetwork mask $RouteMask -> $wslIp"
 }
 catch {
