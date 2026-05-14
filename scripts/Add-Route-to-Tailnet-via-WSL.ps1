@@ -251,18 +251,61 @@ if (-not $distro) {
 
 Write-Log "Using WSL distribution: $distro"
 
-Write-Log "Checking Tailscale inside WSL..."
+Write-Log "Checking for a WSL-visible Tailscale IPv4 address..."
 $tailscaleResult = Invoke-WslSh -Distro $distro -Script @'
-if ! command -v tailscale >/dev/null 2>&1; then
+if ! command -v ip >/dev/null 2>&1; then
     exit 20
 fi
 
-if ! tailscale status >/dev/null 2>&1; then
-    exit 21
-fi
+ip_output=$(ip -4 -o addr show scope global 2>/dev/null) || exit 21
 
-ts_ip=$(tailscale ip -4 2>/dev/null | head -n1)
-[ -n "$ts_ip" ] || exit 22
+ts_ip=$(printf '%s\n' "$ip_output" | awk '
+function in_tailnet(ip, octets) {
+    split(ip, octets, ".")
+    return octets[1] == 100 && octets[2] >= 64 && octets[2] <= 127
+}
+
+function clean_iface(iface) {
+    sub(/@.*/, "", iface)
+    return iface
+}
+
+{
+    iface = clean_iface($2)
+    split($4, cidr, "/")
+    addr = cidr[1]
+
+    if (addr == "" || !in_tailnet(addr)) {
+        next
+    }
+
+    if (preferred == "" && iface ~ /^(tailscale|ts|tun)/) {
+        preferred = addr
+    }
+
+    if (fallback == "") {
+        fallback = addr
+    }
+}
+
+END {
+    if (preferred != "") {
+        print preferred
+        exit 0
+    }
+
+    if (fallback != "") {
+        print fallback
+        exit 0
+    }
+
+    exit 1
+}
+') || exit 22
+
+if [ -z "$ts_ip" ]; then
+    exit 22
+fi
 
 echo "$ts_ip"
 '@
@@ -274,33 +317,33 @@ switch ($tailscaleExit) {
     0 {
         if ([string]::IsNullOrWhiteSpace($tailscaleIp)) {
             if (-not [string]::IsNullOrWhiteSpace($tailscaleResult.StdErr)) {
-                Write-Log "WSL stderr during Tailscale check: $($tailscaleResult.StdErr.Trim())" 'WARN'
+                Write-Log "WSL stderr during Tailscale interface check: $($tailscaleResult.StdErr.Trim())" 'WARN'
             }
 
-            Fail "Tailscale check returned success, but no IPv4 address was captured from stdout."
+            Fail "Tailscale interface check returned success, but no IPv4 address was captured from stdout."
         }
 
-        Write-Log "Tailscale is running in WSL and has IPv4 address $tailscaleIp"
+        Write-Log "WSL-visible Tailscale IPv4 address found: $tailscaleIp"
     }
     20 {
-        Fail "The 'tailscale' command is not installed in WSL distro '$distro'."
+        Fail "The 'ip' command is not available in WSL distro '$distro'; it is required to inspect WSL network interfaces."
     }
     21 {
         if (-not [string]::IsNullOrWhiteSpace($tailscaleResult.StdErr)) {
-            Write-Log "WSL stderr during Tailscale check: $($tailscaleResult.StdErr.Trim())" 'WARN'
+            Write-Log "WSL stderr during Tailscale interface check: $($tailscaleResult.StdErr.Trim())" 'WARN'
         }
 
-        Fail "Tailscale is not running or is not reachable in WSL distro '$distro'."
+        Fail "The 'ip' command failed while inspecting WSL network interfaces in distro '$distro'."
     }
     22 {
-        Fail "Tailscale is running in WSL distro '$distro', but it does not currently have an IPv4 address."
+        Fail "No WSL-visible Tailscale IPv4 address was found in 100.64.0.0/10 in distro '$distro'."
     }
     default {
         if (-not [string]::IsNullOrWhiteSpace($tailscaleResult.StdErr)) {
-            Write-Log "WSL stderr during Tailscale check: $($tailscaleResult.StdErr.Trim())" 'WARN'
+            Write-Log "WSL stderr during Tailscale interface check: $($tailscaleResult.StdErr.Trim())" 'WARN'
         }
 
-        Fail "Unexpected error while checking Tailscale in WSL (exit code $tailscaleExit)."
+        Fail "Unexpected error while checking for a WSL-visible Tailscale IPv4 address (exit code $tailscaleExit)."
     }
 }
 
