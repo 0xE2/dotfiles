@@ -1,2 +1,4 @@
 .config/zsh/.histfile
 .config/zsh/.zcompdump
+.config/zsh/plugins/
+.config/tmux/plugins/

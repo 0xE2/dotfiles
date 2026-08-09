@@ -2,6 +2,15 @@
 
 This repo has configurations for WSL2, Linux + Exegol and Windows
 
+## Non-interactive shell links
+
+Run the idempotent link installer from an unprivileged user account:
+
+```bash
+./scripts/link_shell_dotfiles.sh
+```
+
+It links `.zshenv`, `.config/zsh`, and `.config/tmux` from this checkout into the current user's home. It refuses conflicting destinations and does not create backups, install packages, or access the network.
 
 ## Exegol on WSL2 (Windows 11)
 
