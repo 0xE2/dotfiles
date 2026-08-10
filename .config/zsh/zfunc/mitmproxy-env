@@ -1,6 +1,10 @@
 mitmproxy-env() {
   emulate -L zsh
-  local repo="${DOTFILES_DIR:-$HOME/projects/dotfiles}"
+  local zsh_config="${ZDOTDIR:-${XDG_CONFIG_HOME:-$HOME/.config}/zsh}"
+  local repo="${DOTFILES_DIR:-}"
+  if [[ -z $repo ]]; then
+    repo="${${zsh_config:A}:h:h}"
+  fi
   local script="$repo/scripts/prepare-mitmproxy-env.sh"
   if [[ ! -r "$script" ]]; then
     print -u2 "mitmproxy-env: not found: $script"

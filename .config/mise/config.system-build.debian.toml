@@ -1,0 +1,4 @@
+[bootstrap.packages]
+"apt:build-essential" = "latest"
+"apt:libssl-dev" = "latest"
+"apt:pkg-config" = "latest"

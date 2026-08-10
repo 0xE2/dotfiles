@@ -13,7 +13,7 @@ PORT="${1:-$DEFAULT_PORT}"
 
 # Validate port; fall back to default if invalid
 case "$PORT" in
-  ''|*[!0-9]*)
+  '' | *[!0-9]*)
     echo "Warning: invalid port '$PORT'; using $DEFAULT_PORT" >&2
     PORT="$DEFAULT_PORT"
     ;;
@@ -21,18 +21,8 @@ esac
 
 PROXY_URL="http://127.0.0.1:${PORT}"
 
-# Choose mitmproxy CA bundle path relative to HOME (Linux and macOS defaults)
-LINUX_CA="${HOME}/.mitmproxy/mitmproxy-ca-cert.pem"
-MAC_CA="${HOME}/Library/Application Support/mitmproxy/mitmproxy-ca-cert.pem"
-
-if [ -f "$LINUX_CA" ]; then
-  CA_BUNDLE="$LINUX_CA"
-elif [ -f "$MAC_CA" ]; then
-  CA_BUNDLE="$MAC_CA"
-else
-  # Default to Linux path even if not present yet (mitmproxy will create it)
-  CA_BUNDLE="$LINUX_CA"
-fi
+# mitmproxy creates this Linux CA bundle on first start.
+CA_BUNDLE="${HOME}/.mitmproxy/mitmproxy-ca-cert.pem"
 
 # Export proxy variables (both cases for broad compatibility)
 export HTTP_PROXY="$PROXY_URL"

@@ -1,0 +1,6 @@
+[tools]
+helm = "latest"
+k9s = "latest"
+kubectl = "latest"
+kubectx = "latest"
+kubens = "latest"

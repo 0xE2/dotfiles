@@ -5,13 +5,17 @@ dotfiles_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 xdg_config_home="${XDG_CONFIG_HOME:-${HOME:?}/.config}"
 
 sources=(
+  "$dotfiles_dir/.bashrc"
   "$dotfiles_dir/.zshenv"
+  "$dotfiles_dir/.config/mise"
   "$dotfiles_dir/.config/zsh"
   "$dotfiles_dir/.config/tmux"
 )
 
 destinations=(
+  "${HOME:?}/.bashrc"
   "${HOME:?}/.zshenv"
+  "$xdg_config_home/mise"
   "$xdg_config_home/zsh"
   "$xdg_config_home/tmux"
 )

@@ -1,0 +1,6 @@
+[tools]
+go = "1.26"
+node = "24"
+python = "3.14"
+uv = "latest"
+"pipx:pipxu" = { version = "latest", depends = ["python", "uv"] }

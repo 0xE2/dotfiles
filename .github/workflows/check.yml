@@ -1,0 +1,47 @@
+name: Check
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  dotfiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install pinned mise
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .mise-bootstrap.env
+          url="https://github.com/jdx/mise/releases/download/v${MISE_VERSION}/mise-v${MISE_VERSION}-linux-x64"
+          mkdir -p "$HOME/.local/bin"
+          curl --fail --location --proto '=https' --tlsv1.2 --output "$HOME/.local/bin/mise" "$url"
+          printf '%s  %s\n' "$MISE_SHA256_X64" "$HOME/.local/bin/mise" | sha256sum --check -
+          chmod 0755 "$HOME/.local/bin/mise"
+
+      - name: Install validators from locks
+        shell: bash
+        env:
+          MISE_CONFIG_DIR: ${{ github.workspace }}/.config/mise
+          MISE_ENV: shell-base
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          "$HOME/.local/bin/mise" install --locked shellcheck shfmt
+
+      - name: Validate repository
+        shell: bash
+        env:
+          MISE_CONFIG_DIR: ${{ github.workspace }}/.config/mise
+          MISE_ENV: shell-base
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          export MISE_BIN="$HOME/.local/bin/mise"
+          eval "$("$MISE_BIN" activate bash)"
+          ./scripts/check.sh

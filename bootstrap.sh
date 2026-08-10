@@ -1,107 +1,227 @@
 #!/usr/bin/env bash
 set -euo pipefail
-IFS=$'\n\t'
 
-## Paths
-DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-"$HOME/.config"}"
-# Set XDG_CONFIG_HOME and ZDOTDIR if not set
-source "$DOTFILES_DIR/.zshenv"
+dotfiles_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+mise_config_dir="$dotfiles_dir/.config/mise"
+mise_bin="${HOME:?}/.local/bin/mise"
+profile=""
+env_list=""
+install_system=false
 
-## Helpers
-log()    { echo "➤ $*"; }
-is_nixos(){ [[ -f /etc/NIXOS ]]; }
-link() {
-  local src=$1 dest=$2
-  mkdir --parents "$(dirname "$dest")"
-  if [[ -L $dest ]]; then
-    if [[ "$(readlink "$dest")" == "$src" ]]; then
-      log "Skip: $dest already → $src"
-      return
-    else
-      rm "$dest"
-    fi
-  elif [[ -e $dest ]]; then
-    mv "$dest" "$dest".backup."$(date +%s)"
-    log "Backed up existing $dest"
-  fi
-  ln --symbolic "$src" "$dest"
-  log "Linked $dest → $src"
+# The manifest path is resolved relative to this script at runtime.
+# shellcheck disable=SC1091
+source "$dotfiles_dir/.mise-bootstrap.env"
+[[ $MISE_VERSION =~ ^[0-9]{4}\.[0-9]{1,2}\.[0-9]+$ ]] || {
+  printf 'error: invalid mise version in .mise-bootstrap.env\n' >&2
+  exit 1
+}
+[[ $MISE_SHA256_X64 =~ ^[0-9a-f]{64}$ && $MISE_SHA256_ARM64 =~ ^[0-9a-f]{64}$ ]] || {
+  printf 'error: invalid mise checksum in .mise-bootstrap.env\n' >&2
+  exit 1
+}
+readonly MISE_VERSION MISE_SHA256_X64 MISE_SHA256_ARM64
+
+log() {
+  printf '==> %s\n' "$*"
 }
 
-append_global_zsh() {
-  # Read the helper script
-  raw_script=$(<"$DOTFILES_DIR/scripts/append_custom_config.sh")
-  # Escape every " → \" using parameter expansion so it can be safely inlined into sudo bash -c "…"
-  escaped_script="${raw_script//\"/\\\"}"
-  sudo bash -c "DOT=\$(cat \"$DOTFILES_DIR/.zshenv\"); $escaped_script /etc/zsh/zshenv \"\$DOT\" \"CUSTOM ZDOTDIR\""
+die() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
 }
 
-## Installers
-install_zsh() {
-  log "Installing Zsh configs..."
-  link "$DOTFILES_DIR/.config/zsh" "$XDG_CONFIG_HOME/zsh"
-  if ! is_nixos; then
-    log "Not a NixOS: updating /etc/zsh/zshenv"
-    append_global_zsh
-  else
-    log "NixOS detected: updating ~/.zshenv instead of global one"
-    link "$DOTFILES_DIR/.zshenv" "$HOME/.zshenv"
-  fi
+usage() {
+  cat <<'EOF'
+Usage: ./bootstrap.sh [--profile NAME | --env LIST] [--system]
+
+Options:
+  --profile NAME  Select a committed profile from .config/mise/profiles.
+  --env LIST      Select a comma-separated list of mise environments.
+  --system        Explicitly install declared host packages (may use sudo).
+  -h, --help      Show this help.
+
+With no profile option, bootstrap reuses the existing local selection.
+EOF
 }
 
-install_tmux() {
-  log "Installing Tmux configs..."
-  link "$DOTFILES_DIR/.config/tmux" "$XDG_CONFIG_HOME/tmux"
-  local tpm="$XDG_CONFIG_HOME/tmux/plugins/tpm"
-  if [[ ! -d $tpm ]]; then
-    git clone https://github.com/tmux-plugins/tpm "$tpm"
-    log "Cloned TPM to $tpm"
-  else
-    log "TPM already installed"
-  fi
-}
-
-install_git() {
-  log "Installing Git configs..."
-  link "$DOTFILES_DIR/.gitconfig" "$HOME/.gitconfig"
-}
-
-
-## Argument parsing
-declare -A MODULES=(
-  [zsh]=install_zsh
-  [tmux]=install_tmux
-  [git]=install_git
-)
-
-selected=()
-
-while getopts "aztgh" opt; do
-  case $opt in
-    a) selected=( "${!MODULES[@]}" ) ;;  # all
-    z) selected+=(zsh) ;;
-    t) selected+=(tmux) ;;
-    g) selected+=(git) ;;
-    h|*) echo "Usage: $0 [-a] [-z] [-t] [-g]" && exit 1 ;;
+while (($#)); do
+  case "$1" in
+    --profile)
+      (($# >= 2)) || die "--profile requires a value"
+      profile=$2
+      shift 2
+      ;;
+    --env)
+      (($# >= 2)) || die "--env requires a value"
+      env_list=$2
+      shift 2
+      ;;
+    --system)
+      install_system=true
+      shift
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      die "unknown argument: $1"
+      ;;
   esac
 done
 
-shift $((OPTIND-1))
+[[ -z $profile || -z $env_list ]] || die "--profile and --env are mutually exclusive"
+[[ $(uname -s) == Linux ]] || die "only Linux hosts are supported"
 
-## Interactive if nothing chosen
-if [[ ${#selected[@]} -eq 0 ]]; then
-  for mod in "${!MODULES[@]}"; do
-    read -rp "Install $mod configs? [Y/n] " ans
-    [[ $ans =~ ^([yY]|$) ]] && selected+=("$mod")
-  done
+case "$(uname -m)" in
+  x86_64 | amd64)
+    mise_arch=x64
+    mise_sha256=$MISE_SHA256_X64
+    ;;
+  aarch64 | arm64)
+    mise_arch=arm64
+    mise_sha256=$MISE_SHA256_ARM64
+    ;;
+  *)
+    die "unsupported architecture: $(uname -m)"
+    ;;
+esac
+
+install_mise() {
+  local installed_version=""
+  local tmp_dir=""
+  local download=""
+  local url=""
+
+  if [[ -x $mise_bin ]]; then
+    installed_version="$(MISE_NO_CONFIG=1 "$mise_bin" --version 2>/dev/null | awk '{print $1}')"
+  fi
+  if [[ $installed_version == "$MISE_VERSION" ]]; then
+    log "mise $MISE_VERSION is already installed"
+    return
+  fi
+
+  command -v curl >/dev/null || die "curl is required to install mise"
+  command -v sha256sum >/dev/null || die "sha256sum is required to verify mise"
+
+  tmp_dir="$(mktemp -d -t dotfiles-mise.XXXXXXXXXX)"
+  [[ -n $tmp_dir && -d $tmp_dir ]] || die "failed to create a temporary directory"
+  trap '[[ -n ${tmp_dir:-} && -d ${tmp_dir:-} ]] && rm -r -- "$tmp_dir"' RETURN
+  download="$tmp_dir/mise"
+  url="https://github.com/jdx/mise/releases/download/v${MISE_VERSION}/mise-v${MISE_VERSION}-linux-${mise_arch}"
+
+  log "downloading mise $MISE_VERSION for linux-$mise_arch"
+  curl --fail --location --proto '=https' --tlsv1.2 --output "$download" "$url"
+  printf '%s  %s\n' "$mise_sha256" "$download" | sha256sum --check --status - ||
+    die "mise checksum verification failed"
+
+  mkdir -p -- "$(dirname "$mise_bin")"
+  install -m 0755 -- "$download" "$mise_bin"
+  [[ "$(MISE_NO_CONFIG=1 "$mise_bin" --version | awk '{print $1}')" == "$MISE_VERSION" ]] ||
+    die "installed mise version does not match $MISE_VERSION"
+  log "installed verified mise $MISE_VERSION at $mise_bin"
+}
+
+is_generated_selection() {
+  [[ -f $1 ]] && IFS= read -r first_line <"$1" && [[ $first_line == "# Generated by bootstrap.sh" ]]
+}
+
+prepare_selection_target() {
+  local selection=$1
+
+  if [[ -L $selection ]]; then
+    rm -- "$selection"
+  elif [[ -e $selection ]]; then
+    is_generated_selection "$selection" ||
+      die "refusing to replace unmanaged profile selection: $selection"
+    rm -- "$selection"
+  fi
+}
+
+select_profile() {
+  local selection="$mise_config_dir/miserc.toml"
+  local profile_file=""
+  local profile_target=""
+
+  if [[ -n $profile ]]; then
+    [[ $profile =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "invalid profile name: $profile"
+    profile_file="$mise_config_dir/profiles/$profile.miserc.toml"
+    [[ -f $profile_file ]] || die "unknown profile: $profile"
+    profile_target="profiles/$profile.miserc.toml"
+    if [[ -L $selection && $(readlink -- "$selection") == "$profile_target" ]]; then
+      log "profile $profile is already selected"
+      return
+    fi
+    prepare_selection_target "$selection"
+    ln -s -- "$profile_target" "$selection"
+    log "selected profile $profile"
+    return
+  fi
+
+  if [[ -n $env_list ]]; then
+    local -a environments=()
+    local environment=""
+    local saw_personal=false
+    local saw_work=false
+    local tmp_selection=""
+
+    IFS=',' read -r -a environments <<<"$env_list"
+    ((${#environments[@]} > 0)) || die "--env must not be empty"
+    for environment in "${environments[@]}"; do
+      [[ $environment =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "invalid environment: $environment"
+      [[ -f "$mise_config_dir/config.$environment.toml" ]] ||
+        die "unknown environment: $environment"
+      [[ $environment == personal ]] && saw_personal=true
+      [[ $environment == work ]] && saw_work=true
+    done
+    [[ $saw_personal == false || $saw_work == false ]] ||
+      die "personal and work environments are mutually exclusive"
+
+    prepare_selection_target "$selection"
+    tmp_selection="$(mktemp "$mise_config_dir/.miserc.toml.XXXXXXXXXX")"
+    {
+      printf '# Generated by bootstrap.sh\n'
+      printf 'env = ['
+      local separator=""
+      for environment in "${environments[@]}"; do
+        printf '%s"%s"' "$separator" "$environment"
+        separator=', '
+      done
+      printf ']\n'
+    } >"$tmp_selection"
+    mv -- "$tmp_selection" "$selection"
+    log "selected environments: ${env_list//,/, }"
+    return
+  fi
+
+  [[ -e $selection || -L $selection ]] || {
+    printf 'Available profiles:\n' >&2
+    find "$mise_config_dir/profiles" -maxdepth 1 -name '*.miserc.toml' -printf '  %f\n' |
+      sed 's/\.miserc\.toml$//' >&2
+    die "select a profile with --profile or environments with --env"
+  }
+  log "reusing the existing mise environment selection"
+}
+
+install_mise
+"$dotfiles_dir/scripts/link_shell_dotfiles.sh"
+select_profile
+
+export MISE_CONFIG_DIR="$mise_config_dir"
+export MISE_TRUSTED_CONFIG_PATHS="$dotfiles_dir"
+
+if [[ $install_system == true ]]; then
+  if [[ -f /usr/share/qubes/marker-vm || $profile == qubes-* ]]; then
+    die "system packages belong in the Qubes TemplateVM; refusing --system in an AppVM profile"
+  fi
+  log "installing explicitly requested host packages"
+  "$mise_bin" bootstrap packages apply --yes
 fi
 
-## Run them (dedupe)
-for mod in $(printf "%s\n" "${selected[@]}" | sort -u); do
-  "${MODULES[$mod]}"
-  # Print a separator for half of the cols length
-  printf '%*s\n' "$((${COLUMNS:-$(tput cols)} / 2))" '' | tr ' ' -
-done
+log "applying pinned shell and tmux plugin repositories"
+"$mise_bin" bootstrap repos apply --yes
 
-log "Done."
+log "installing tools from committed lockfiles"
+"$mise_bin" install --locked
+
+log "bootstrap complete"

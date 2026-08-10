@@ -2,3 +2,5 @@
 .config/zsh/.zcompdump
 .config/zsh/plugins/
 .config/tmux/plugins/
+.config/mise/miserc.toml
+.config/mise/*.local.toml

@@ -1,0 +1,17 @@
+[tools]
+"aqua:asciinema/asciinema" = "latest"
+fzf = "latest"
+ripgrep = "latest"
+jq = "latest"
+shellcheck = "latest"
+shfmt = "latest"
+
+[bootstrap.repos]
+"~/.local/share/zsh-plugins/powerlevel10k" = { url = "https://github.com/romkatv/powerlevel10k.git", ref = "9253fb1c5034410c43a0c681ff8294181c54016c" }
+"~/.local/share/zsh-plugins/zsh-autosuggestions" = { url = "https://github.com/zsh-users/zsh-autosuggestions.git", ref = "85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5" }
+"~/.local/share/zsh-plugins/zsh-history-substring-search" = { url = "https://github.com/zsh-users/zsh-history-substring-search.git", ref = "14c8d2e0ffaee98f2df9850b19944f32546fdea5" }
+"~/.config/tmux/plugins/tmux-fingers" = { url = "https://github.com/Morantron/tmux-fingers.git", ref = "fc3c750b8d73ac3e29675aae3b3ac6a00a0718f1" }
+"~/.config/tmux/plugins/tmux-logging" = { url = "https://github.com/tmux-plugins/tmux-logging.git", ref = "b5c5f7b9bc679ca161a442e932d6186da8d3538f" }
+"~/.config/tmux/plugins/tmux-prefix-highlight" = { url = "https://github.com/tmux-plugins/tmux-prefix-highlight.git", ref = "06cbb4ecd3a0a918ce355c70dc56d79debd455c7" }
+"~/.config/tmux/plugins/tmux-sensible" = { url = "https://github.com/tmux-plugins/tmux-sensible.git", ref = "25cb91f42d020f675bb0a2ce3fbd3a5d96119efa" }
+"~/.config/tmux/plugins/tpm" = { url = "https://github.com/tmux-plugins/tpm.git", ref = "e261deb1b47614eed3400089ce7197dc68acc4eb" }

@@ -1,0 +1,4 @@
+[tools]
+age = "latest"
+"pipx:mitmproxy" = { version = "latest", depends = ["python", "uv"] }
+sops = "latest"

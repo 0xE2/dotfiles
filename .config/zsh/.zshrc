@@ -5,11 +5,9 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-# Check if we're on QubesOS. We're most likely in AppVM, so let's indicate to
-# our scripts to use non-volatile directories
-[[ -f "/usr/share/qubes/marker-vm" ]] && export LIMIT_TO_USER_DIRS=true
-# Same for NixOS as it doesn't follow the FHS standard
-[[ -f "/etc/NIXOS" ]] && export LIMIT_TO_USER_DIRS=true
+if [[ -x $HOME/.local/bin/mise ]]; then
+  eval "$("$HOME/.local/bin/mise" activate zsh)"
+fi
 
 [ -f "${ZDOTDIR}/aliasrc.zsh" ] && source "${ZDOTDIR}/aliasrc.zsh"
 [ -f "${ZDOTDIR}/optionrc.zsh" ] && source "${ZDOTDIR}/optionrc.zsh"
@@ -28,22 +26,9 @@ WORDCHARS=${WORDCHARS//\/}
 # hide EOL sign ('%')
 PROMPT_EOL_MARK=""
 
-export PATH=~/.local/bin:~/bin:~/go/bin:/usr/local/go/bin:$PATH
+export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 
 # Prefer [[ in zsh/bash scripts for robustness and readability
-
-# aqua is a declarative CLI version manager
-if (( $+commands[aqua] )); then
-  export PATH="$(aqua root-dir)/bin:$PATH"
-  [[ -f "$XDG_CONFIG_HOME/aquaproj-aqua/aqua.yaml" ]] && export AQUA_GLOBAL_CONFIG="$XDG_CONFIG_HOME/aquaproj-aqua/aqua.yaml"
-fi
-
-export PYENV_ROOT="$HOME/.pyenv"
-[[ -d "$PYENV_ROOT/bin" ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-
-# Krew is the package manager for kubectl plugins
-KREW_ROOT="${KREW_ROOT:-$HOME/.krew}"
-[[ -d "$KREW_ROOT/bin" ]] && export PATH="$KREW_ROOT/bin:$PATH"
 
 fpath=("$ZDOTDIR/completions" "$ZDOTDIR/zfunc" "${fpath[@]}")
 
@@ -163,10 +148,6 @@ if (( $+commands[kubectl] )); then
   compdef __start_kubectl k
 fi
 
-if (( $+commands[aqua] )); then
-  source <(aqua completion zsh)
-fi
-
 # Without `setopt completealiases` zsh expands alias before completion, so apart from creating aliases
 # you should also wire the completer to the expanded alias
 compdef _kubectx kubectl-ctx
@@ -192,17 +173,6 @@ fi
 ####################################################################################################
 # Other
 ####################################################################################################
-
-# Continue Python init
-if [[ -d $PYENV_ROOT/bin ]]; then
-  eval "$(pyenv init -)"
-  export PIP_REQUIRE_VIRTUALENV=true
-  # PIPX_DEFAULT_PYTHON
-fi
-
-export NVM_DIR="$HOME/.config/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
 autoload -Uz get_tunnel_ipv4
 autoload -Uz mitmproxy-env

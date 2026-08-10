@@ -1,37 +1,22 @@
 () {
-  if [[ "$LIMIT_TO_USER_DIRS" == "true" ]]; then
-    ZPLUGINDIR="$HOME/.local/share/zsh-plugins"
-  else
-    ZPLUGINDIR="/etc/zsh/plugins"
-  fi
+  local plugin_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh-plugins"
+  local plugin_file
+  local missing=0
 
-  # Check if the plugin directory exists
-  if [ ! -d "${ZPLUGINDIR}" ]; then
-    echo "Plugin directory ${ZPLUGINDIR} does not exist."
-    mkdir "$ZPLUGINDIR" || {echo "Please create it manually with 'sudo mkdir -p ${ZPLUGINDIR}; sudo chown -R $(whoami):$(whoami) ${ZPLUGINDIR}'"; return 1}
-  fi
-
-  apply() {
-    github_org=$1
-    plugin_name=$2
-    
-    if [ ! -d "${ZPLUGINDIR}/${plugin_name}" ]; then
-      echo "WARNING: ${plugin_name} not found. Installing..."
-      git clone "https://github.com/${github_org}/${plugin_name}" "${ZPLUGINDIR}/${plugin_name}"
-      echo "SUCCESS: ${plugin_name} installed!"
-    fi
-    
-    if [ "${plugin_name}" = "powerlevel10k" ]; then
-      source "${ZPLUGINDIR}/${plugin_name}/${plugin_name}.zsh-theme"
+  for plugin_file in \
+    "$plugin_dir/zsh-history-substring-search/zsh-history-substring-search.zsh" \
+    "$plugin_dir/zsh-autosuggestions/zsh-autosuggestions.zsh" \
+    "$plugin_dir/powerlevel10k/powerlevel10k.zsh-theme"
+  do
+    if [[ -r $plugin_file ]]; then
+      source "$plugin_file"
     else
-      source "${ZPLUGINDIR}/${plugin_name}/${plugin_name}.plugin.zsh"
+      print -u2 "zsh: plugin is not installed: $plugin_file"
+      missing=1
     fi
-  }
+  done
 
-#   apply zdharma-continuum fast-syntax-highlighting
-#   apply zsh-users zsh-syntax-highlighting # load before zsh-history-substring-search
-  apply zsh-users zsh-history-substring-search
-  apply zsh-users zsh-autosuggestions
-#   apply jeffreytse zsh-vi-mode
-  apply romkatv powerlevel10k
+  if (( missing )); then
+    print -u2 "zsh: run the dotfiles bootstrap to install pinned plugins"
+  fi
 }

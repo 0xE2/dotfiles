@@ -1,102 +1,81 @@
-# Dotfiles and config files
+# Linux dotfiles and user toolchain
 
-This repo has configurations for WSL2, Linux + Exegol and Windows
+This repository configures a user-wide Linux shell environment and installs versioned tools with [mise](https://mise.jdx.dev/). It targets x86-64 and ARM64 hosts running WSL2, Ubuntu, or Qubes OS. Windows files in the repository are standalone host utilities; Windows itself is not a bootstrap target.
 
-## Non-interactive shell links
+## Quick start
 
-Run the idempotent link installer from an unprivileged user account:
+The bootstrap requires `curl` and `sha256sum`. It downloads the repository's exact mise release to `~/.local/bin/mise`, verifies its published SHA-256 checksum, links the dotfiles, selects a host profile, installs pinned plugins, and installs tools from committed locks.
+
+```bash
+./bootstrap.sh --profile personal-dev
+./bootstrap.sh --profile work --system
+```
+
+`--system` is deliberately separate because it may invoke `sudo` through apt. Without it, bootstrap changes only user-owned state.
+
+For a one-off combination instead of a committed profile:
+
+```bash
+./bootstrap.sh --env shell-base,languages,personal
+```
+
+Run `./bootstrap.sh --help` for the complete interface. Re-running bootstrap is safe. It refuses unmanaged dotfile conflicts, dirty plugin repositories, and invalid or contradictory environment selections.
+
+## Profiles and categories
+
+Profiles live under `.config/mise/profiles/`. Bootstrap selects one by linking it to the ignored `.config/mise/miserc.toml`. An explicit `--env` selection generates that local file instead. `personal` and `work` cannot be selected together because both configure Java.
+
+Mise's `pipx:` backend uses `uv tool install` whenever uv is available. Mise owns persistent Python CLI declarations; `pipxu` remains available for ad hoc tools and the `pipxu-shell` helper.
+
+## Dotfile linking
+
+The linker is an atomic, network-free operation:
 
 ```bash
 ./scripts/link_shell_dotfiles.sh
 ```
 
-It links `.zshenv`, `.config/zsh`, and `.config/tmux` from this checkout into the current user's home. It refuses conflicting destinations and does not create backups, install packages, or access the network.
+It preflights every destination before creating any link, and owns:
 
-## Exegol on WSL2 (Windows 11)
+- `~/.bashrc`
+- `~/.zshenv`
+- `~/.config/mise`
+- `~/.config/zsh`
+- `~/.config/tmux`
 
-``` Bash
-sudo apt install x11-xserver-utils
-<create Exegol "bin" somewhere in the PATH and chmod +x it>
+It refuses a destination that is a real file or points somewhere else. Resolve the conflict yourself and rerun it; the script never backs up or overwrites files. Zsh is the primary shell. The linked Bash configuration is intentionally minimal and acts as a fallback.
 
-#!/usr/bin/env bash
-.../Exegol-venv/bin/python3 .../Exegol/exegol.py "$@"
+## Plugin ownership
+
+Mise bootstrap clones Zsh plugins, TPM, and tmux plugins at exact commits. Shell startup only loads existing checkouts and never accesses the network. TPM is a loader, not the update mechanism; do not use its install/update shortcuts to change plugin revisions.
+
+## Updates and validation
+
+Fuzzy tool constraints are held back for seven days. Committed lockfiles record the resolved downloads and checksums for Linux x86-64 and ARM64. Update them deliberately with the repository's pinned mise version:
+
+```bash
+./scripts/update_mise_locks.sh
 ```
 
-## Zsh
+Mise itself is a bootstrap dependency rather than a tool lock. Its version and Linux x86-64/ARM64 checksums live in `.mise-bootstrap.env`. Update that manifest to the latest stable immutable GitHub release with:
 
-https://zsh.sourceforge.io/Doc/Release/Files.html#Files
-
-``` Bash
-zsh -d -f -i # run in debug mode, don't load any config files, run interactively
-
-chsh -s $(which zsh)
-
-cat .zshenv | sudo tee -a /etc/zsh/zshenv
-    OR, as root
-source ./scripts/append_custom_config.sh
-content=$(cat .zshenv)
-update_config /etc/zsh/zshenv $content
-
-# ZDOTDIR env var isn't exported from global zshenv because directory is not yet linked
-ln -s "$(pwd)/.config/zsh" ~/.config/zsh
+```bash
+./scripts/update_mise_bootstrap.sh
 ```
 
-### Plugins
-`$ZDOTDIR/plugins/` OR `/usr/share/zsh/plugins/` OR `/etc/zsh/plugins`
-- https://github.com/romkatv/powerlevel10k
-    - https://www.nerdfonts.com/
-- https://github.com/zsh-users/zsh-autosuggestions
-- https://github.com/zsh-users/zsh-history-substring-search
+The updater reads the latest version from `mise version --json`, obtains both asset digests from the GitHub Releases API, and changes only the manifest. It does not install the new binary or create a Git commit. The seven-day tool release delay does not apply to mise itself.
 
-### Tmux
+After an update, run:
 
-```
-mkdir $XDG_CONFIG_HOME/tmux
-ln -s $(pwd)/.config/tmux/tmux.conf $XDG_CONFIG_HOME/tmux/tmux.conf
-git clone https://github.com/tmux-plugins/tpm $XDG_CONFIG_HOME/tmux/plugins/tpm
+```bash
+./scripts/check.sh
 ```
 
-### Aqua
+The check covers Bash syntax, ShellCheck, shfmt, mise formatting, every profile, locked dry-run installation, and two-pass linker idempotence. GitHub Actions runs the same checks without applying system packages.
 
-```shell
-# Install links for aqua-managed tools
-aqua install --only-link --all
-```
+## Situational helpers
 
-### Terminals
-
-xfce4-terminal
-```shell
-_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/xfce4/terminal"
-terminalrc="$_config_dir/terminalrc"
-if [ ! -f "$terminalrc" ]; then
-    mkdir -p _config_dir
-    echo "[Configuration]" > "$terminalrc"
-    echo "FontName=MesloLGS NF 12" >> "$terminalrc"
-else
-    echo "$terminalrc already exists"
-    sed -i 's/^FontName=.*/FontName=MesloLGS NF 12/' "$terminalrc"
-fi
-```
-
-## Python
-
-_pyenv + pipenv + pipx:_
-
-- https://github.com/pyenv/pyenv#automatic-installer
-- in zsh: `PIP_REQUIRE_VIRTUALENV=false pip install pipenv pipx`
-
-## Podman
-
-1. Install Podman on Windows, create machine -> creates another WSL distribution
-2. Install Podman on WSL2 from `podman-remote-static-linux_amd64.tar.gz`
-3. Copy `%APPDATA%\containers\containers.conf` and SSH key from Windows to WSL2 `$HOME/.config/containers/containers.conf`
-    * Use key from Windows in WSL2:
-
-``` Bash
-podman system connection add podman-machine-default-root --default --identity /mnt/c/Users/$WIN_USER/.ssh/podman-machine-default ssh://root@127.0.0.1:$PORT/run/podman/podman.sock
-```
-
-## Inspired by
-
-- ZSH | https://github.com/radleylewis/dotfiles
+- `mitmproxy-env` prepares proxy and CA environment variables for the current
+  Zsh session.
+- `kpx` integrates KeePassXC where its CLI is available.
+- `scripts/Add-Route-to-Tailnet-via-WSL.ps1` is a standalone Windows utility.

@@ -1,0 +1,8 @@
+[bootstrap.packages]
+"apt:ca-certificates" = "latest"
+"apt:curl" = "latest"
+"apt:git" = "latest"
+"apt:htop" = "latest"
+"apt:rsync" = "latest"
+"apt:tmux" = "latest"
+"apt:zsh" = "latest"
