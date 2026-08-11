@@ -1,4 +1,5 @@
 [bootstrap.packages]
+"apt:bash-completion" = "latest"
 "apt:ca-certificates" = "latest"
 "apt:curl" = "latest"
 "apt:git" = "latest"

@@ -24,7 +24,7 @@ jobs:
           printf '%s  %s\n' "$MISE_SHA256_X64" "$HOME/.local/bin/mise" | sha256sum --check -
           chmod 0755 "$HOME/.local/bin/mise"
 
-      - name: Install validators from locks
+      - name: Install validators and shell integration fixtures from locks
         shell: bash
         env:
           MISE_CONFIG_DIR: ${{ github.workspace }}/.config/mise
@@ -32,7 +32,7 @@ jobs:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          "$HOME/.local/bin/mise" install --locked shellcheck shfmt
+          "$HOME/.local/bin/mise" install --locked fzf shellcheck shfmt usage
 
       - name: Validate repository
         shell: bash

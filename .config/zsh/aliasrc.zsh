@@ -10,10 +10,8 @@ alias m='micro'
 alias ts='tailscale'
 alias k='kubectl'
 
-alias kubectx="kubectl-ctx"
-alias kctx="kubectl-ctx"
-alias kubens="kubectl-ns"
-alias kns="kubectl-ns"
+alias kctx='kubectx'
+alias kns='kubens'
 
 # https://stackoverflow.com/questions/24947080/implementing-autocompletion-to-zsh-aliases
 # https://superuser.com/questions/1549955/how-to-export-hash-d-directories-to-scripts

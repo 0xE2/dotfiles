@@ -49,6 +49,24 @@ It refuses a destination that is a real file or points somewhere else. Resolve t
 
 Mise bootstrap clones Zsh plugins, TPM, and tmux plugins at exact commits. Shell startup only loads existing checkouts and never accesses the network. TPM is a loader, not the update mechanism; do not use its install/update shortcuts to change plugin revisions.
 
+## Shell completion and integrations
+
+Completion generators never run during shell startup. Bootstrap synchronizes an explicit registry after installing the selected tools, and stores an atomic, host-specific snapshot under `${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/shell-integrations`.
+
+Run synchronization manually after installing or removing an external tool:
+
+```bash
+./scripts/sync_shell_integrations.sh
+```
+
+Inspect installed tools and cache drift without modifying the active snapshot:
+
+```bash
+./scripts/sync_shell_integrations.sh --check
+```
+
+Zsh loads generated functions lazily through `fpath` before distro completions, then sources broader integrations before applying tracked keybindings. Bash loads canonical-command completions when the optional `bash-completion` system package is available. Add new tools to the reviewed registry in [`scripts/sync_shell_integrations.sh`](./scripts/sync_shell_integrations.sh);.
+
 ## Updates and validation
 
 Fuzzy tool constraints are held back for seven days. Committed lockfiles record the resolved downloads and checksums for Linux x86-64 and ARM64. Update them deliberately with the repository's pinned mise version:

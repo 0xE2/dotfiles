@@ -29,9 +29,14 @@ source "$dotfiles_dir/.mise-bootstrap.env"
   exit 1
 }
 
-bash -n bootstrap.sh scripts/check.sh scripts/link_shell_dotfiles.sh scripts/update_mise_bootstrap.sh scripts/update_mise_locks.sh
-shellcheck bootstrap.sh scripts/check.sh scripts/link_shell_dotfiles.sh scripts/prepare-mitmproxy-env.sh scripts/update_mise_bootstrap.sh scripts/update_mise_locks.sh
-shfmt -d -i 2 -ci bootstrap.sh scripts/check.sh scripts/link_shell_dotfiles.sh scripts/prepare-mitmproxy-env.sh scripts/update_mise_bootstrap.sh scripts/update_mise_locks.sh
+bash -n .bashrc bootstrap.sh scripts/check.sh scripts/link_shell_dotfiles.sh scripts/sync_shell_integrations.sh scripts/update_mise_bootstrap.sh scripts/update_mise_locks.sh
+shellcheck bootstrap.sh scripts/check.sh scripts/link_shell_dotfiles.sh scripts/prepare-mitmproxy-env.sh scripts/sync_shell_integrations.sh scripts/update_mise_bootstrap.sh scripts/update_mise_locks.sh
+shellcheck --shell bash .bashrc
+shfmt -d -i 2 -ci bootstrap.sh scripts/check.sh scripts/link_shell_dotfiles.sh scripts/prepare-mitmproxy-env.sh scripts/sync_shell_integrations.sh scripts/update_mise_bootstrap.sh scripts/update_mise_locks.sh
+shfmt -d -ln bash -i 2 -ci .bashrc
+if command -v zsh >/dev/null 2>&1; then
+  zsh -n .config/zsh/.zshrc .config/zsh/aliasrc.zsh
+fi
 
 export MISE_CONFIG_DIR="$dotfiles_dir/.config/mise"
 export MISE_TRUSTED_CONFIG_PATHS="$dotfiles_dir"
@@ -83,6 +88,26 @@ tmp_home="$(mktemp -d -t dotfiles-link-check.XXXXXXXXXX)"
 trap '[[ -n ${tmp_home:-} && -d ${tmp_home:-} ]] && rm -r -- "$tmp_home"' EXIT
 HOME="$tmp_home" XDG_CONFIG_HOME="$tmp_home/.config" scripts/link_shell_dotfiles.sh >/dev/null
 HOME="$tmp_home" XDG_CONFIG_HOME="$tmp_home/.config" scripts/link_shell_dotfiles.sh >/dev/null
+
+HOME="$tmp_home" XDG_CACHE_HOME="$tmp_home/.cache" scripts/sync_shell_integrations.sh >/dev/null
+HOME="$tmp_home" XDG_CACHE_HOME="$tmp_home/.cache" scripts/sync_shell_integrations.sh --check >/dev/null
+[[ -L $tmp_home/.cache/dotfiles/shell-integrations/current ]] || {
+  printf 'error: shell integration synchronizer did not activate a cache generation\n' >&2
+  exit 1
+}
+integration_current="$tmp_home/.cache/dotfiles/shell-integrations/current"
+if command -v mise >/dev/null 2>&1 && type -P usage >/dev/null 2>&1; then
+  [[ -s $integration_current/zsh/completions/_mise && -s $integration_current/bash/completions/mise ]] || {
+    printf 'error: shell integration synchronizer did not generate mise completion\n' >&2
+    exit 1
+  }
+fi
+if command -v fzf >/dev/null 2>&1; then
+  [[ -s $integration_current/zsh/integrations/fzf.zsh && -s $integration_current/bash/integrations/fzf.bash ]] || {
+    printf 'error: shell integration synchronizer did not generate fzf integration\n' >&2
+    exit 1
+  }
+fi
 
 for expected in \
   "$tmp_home/.bashrc" \

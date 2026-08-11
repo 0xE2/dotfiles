@@ -5,6 +5,7 @@ ripgrep = "latest"
 jq = "latest"
 shellcheck = "latest"
 shfmt = "latest"
+usage = "latest"
 
 [bootstrap.repos]
 "~/.local/share/zsh-plugins/powerlevel10k" = { url = "https://github.com/romkatv/powerlevel10k.git", ref = "9253fb1c5034410c43a0c681ff8294181c54016c" }

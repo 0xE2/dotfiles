@@ -224,4 +224,8 @@ log "applying pinned shell and tmux plugin repositories"
 log "installing tools from committed lockfiles"
 "$mise_bin" install --locked
 
+log "synchronizing host-specific shell integrations"
+PATH="$(dirname "$mise_bin"):$PATH" \
+  "$mise_bin" exec -- "$dotfiles_dir/scripts/sync_shell_integrations.sh"
+
 log "bootstrap complete"

@@ -28,9 +28,46 @@ PROMPT_EOL_MARK=""
 
 export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 
-# Prefer [[ in zsh/bash scripts for robustness and readability
+# Configure completion system
 
-fpath=("$ZDOTDIR/completions" "$ZDOTDIR/zfunc" "${fpath[@]}")
+# https://thevaluable.dev/zsh-completion-guide-examples/
+# run-help autoload / man zshmisc -> AUTOLOADING FUNCTIONS
+# man zshbuiltins -> search autoload
+
+shell_integration_root="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/shell-integrations/current/zsh"
+completion_generation=none
+if [[ -d $shell_integration_root/completions ]]; then
+  fpath=("$shell_integration_root/completions" "$ZDOTDIR/completions" "$ZDOTDIR/zfunc" "${fpath[@]}")
+  completion_generation="${${shell_integration_root:A}:h:t}"
+else
+  fpath=("$ZDOTDIR/completions" "$ZDOTDIR/zfunc" "${fpath[@]}")
+fi
+
+ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-zcompdump-${ZSH_VERSION}-${completion_generation}"
+# https://www.reddit.com/r/zsh/comments/13sy6z6/understanding_autoload_x/
+# -U - suppress alias expansion during reading
+# -z - mark the function to be autoloaded using the zsh style
+autoload -Uz compinit
+compinit -i -d "$ZSH_COMPDUMP"
+zmodload -i zsh/parameter
+
+for integration_file in "$shell_integration_root"/integrations/*.zsh(N); do
+  source "$integration_file"
+done
+
+for completion_alias in \
+  k:kubectl \
+  kctx:kubectx \
+  kns:kubens \
+  m:micro \
+  ts:tailscale; do
+  alias_name=${completion_alias%%:*}
+  target_name=${completion_alias#*:}
+  if [[ -n ${_comps[$target_name]-} ]]; then
+    compdef "${_comps[$target_name]}" "$alias_name"
+  fi
+done
+unset alias_name completion_alias completion_generation integration_file shell_integration_root target_name
 
 
 ####################################################################################################
@@ -105,21 +142,6 @@ fi
 # Enable completion features
 ####################################################################################################
 
-# https://thevaluable.dev/zsh-completion-guide-examples/
-# run-help autoload / man zshmisc -> AUTOLOADING FUNCTIONS
-# man zshbuiltins -> search autoload
-# https://www.reddit.com/r/zsh/comments/13sy6z6/understanding_autoload_x/
-# -U - suppress alias expansion during reading
-# -z - mark the function to be autoloaded using the zsh style
-export ZSH_COMPDUMP=$HOME/.cache/zcompdump
-autoload -Uz compinit
-compinit -d ~/.cache/zcompdump
-
-# Taken from the gcloud completion.zsh.inc,
-# without it "complete" is not found
-autoload -U +X bashcompinit && bashcompinit
-zmodload -i zsh/parameter
-
 zstyle ':completion:*:*:*:*:*' menu select  # navigate completions using the arrow keys
 zstyle ':completion:*' auto-description 'specify: %d'
 zstyle ':completion:*' completer _expand _complete
@@ -132,26 +154,6 @@ zstyle ':completion:*' select-prompt %SScrolling active: current selection at %p
 zstyle ':completion:*' use-compctl false
 zstyle ':completion:*' verbose true
 zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
-
-# Setup completion scripts in interactive shells
-
-if (( $+commands[uv] )); then
-  eval "$(uv generate-shell-completion zsh)"
-fi
-
-if (( $+commands[uvx] )); then
-  eval "$(uvx --generate-shell-completion zsh)"
-fi
-
-if (( $+commands[kubectl] )); then
-  source <(kubectl completion zsh)
-  compdef __start_kubectl k
-fi
-
-# Without `setopt completealiases` zsh expands alias before completion, so apart from creating aliases
-# you should also wire the completer to the expanded alias
-compdef _kubectx kubectl-ctx
-compdef _kubens kubectl-ns
 
 ####################################################################################################
 # Set up config for plugins
