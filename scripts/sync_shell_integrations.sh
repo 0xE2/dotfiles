@@ -73,8 +73,8 @@ mkdir -p -- \
   "$stage_dir/bash/completions" \
   "$stage_dir/bash/integrations"
 
-completion_tools=(mise uv uvx kubectl helm sops tailscale podman)
-integration_tools=(fzf)
+completion_tools=(mise uv uvx kubectl helm sops tailscale podman gopass)
+integration_tools=(fzf terraform vault)
 generated=()
 skipped=()
 
@@ -91,6 +91,7 @@ generate_completion() {
     sops:zsh | sops:bash) sops completion "$shell_name" ;;
     tailscale:zsh | tailscale:bash) tailscale completion "$shell_name" ;;
     podman:zsh | podman:bash) podman completion "$shell_name" ;;
+    gopass:zsh | gopass:bash) gopass completion "$shell_name" ;;
     *) return 2 ;;
   esac
 }
@@ -102,6 +103,9 @@ generate_integration() {
   case "$tool:$shell_name" in
     fzf:zsh) fzf --zsh ;;
     fzf:bash) fzf --bash ;;
+    # use for Terraform < 1.9
+    terraform:zsh | terraform:bash) printf 'complete -o nospace -C "%s" terraform\n' "$(command -v terraform)" ;;
+    vault:zsh | vault:bash) printf 'complete -o nospace -C "%s" vault\n' "$(command -v vault)" ;;
     *) return 2 ;;
   esac
 }

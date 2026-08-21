@@ -12,6 +12,7 @@ fi
 [ -f "${ZDOTDIR}/aliasrc.zsh" ] && source "${ZDOTDIR}/aliasrc.zsh"
 [ -f "${ZDOTDIR}/optionrc.zsh" ] && source "${ZDOTDIR}/optionrc.zsh"
 [ -f "${ZDOTDIR}/pluginrc.zsh" ] && source "${ZDOTDIR}/pluginrc.zsh"
+[ -f "${ZDOTDIR}/env.zsh" ] && source "${ZDOTDIR}/env.zsh"
 
 # History
 HISTFILE=~/.histfile
@@ -26,7 +27,7 @@ WORDCHARS=${WORDCHARS//\/}
 # hide EOL sign ('%')
 PROMPT_EOL_MARK=""
 
-export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+export PATH="$HOME/go/bin:$HOME/.local/bin:$HOME/bin:$PATH"
 
 # Configure completion system
 
@@ -49,6 +50,7 @@ ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-zcompdump-${ZSH_VERSION}-
 # -z - mark the function to be autoloaded using the zsh style
 autoload -Uz compinit
 compinit -i -d "$ZSH_COMPDUMP"
+autoload -U bashcompinit && bashcompinit
 zmodload -i zsh/parameter
 
 for integration_file in "$shell_integration_root"/integrations/*.zsh(N); do

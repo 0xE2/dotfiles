@@ -11,3 +11,17 @@ url = "https://github.com/SAP/SapMachine/releases/download/sapmachine-25.0.4/sap
 [tools.java."platforms.linux-x64"]
 checksum = "sha256:fc3851ec41715a4fccb30820a10c8ceaac161175567ea784de7dffae47eedc3a"
 url = "https://github.com/SAP/SapMachine/releases/download/sapmachine-25.0.4/sapmachine-jdk-25.0.4_linux-x64_bin.tar.gz"
+
+[[tools.opentofu]]
+version = "1.10.6"
+backend = "aqua:opentofu/opentofu"
+
+[tools.opentofu."platforms.linux-arm64"]
+checksum = "sha256:b2cac25defd5009d644daaadb05f9b9bdc2b4a544d6d7eb05ea41487e0d6c0c3"
+url = "https://github.com/opentofu/opentofu/releases/download/v1.10.6/tofu_1.10.6_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/opentofu/opentofu/releases/assets/289301292"
+
+[tools.opentofu."platforms.linux-x64"]
+checksum = "sha256:b6b46b4fd8dd0b96e624f2a2d5fbc4efae2fc0174529b37292775c847c2e7d2c"
+url = "https://github.com/opentofu/opentofu/releases/download/v1.10.6/tofu_1.10.6_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/opentofu/opentofu/releases/assets/289301308"

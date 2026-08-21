@@ -1,2 +1,2 @@
 # devsecops uses uv-backed Python tools, so this profile includes languages.
-env = ["shell-base", "languages", "work", "devops", "devsecops"]
+env = ["shell-base", "languages", "work", "devops", "devsecops", "devops-work"]
