@@ -1,0 +1,57 @@
+[tools]
+"pipx:mitmproxy" = { version = "latest", depends = ["python", "uv"] }
+
+[tools."github:skylot/jadx"]
+version = "latest"
+depends = ["java"]
+
+[tools."github:iBotPeaches/Apktool"]
+version = "latest"
+depends = ["java"]
+bin_path = "bin"
+postinstall = '''
+install_root="${MISE_TOOL_INSTALL_PATH:?}"
+jar_path="$(find "$install_root" -maxdepth 1 -type f -name 'apktool_*.jar' -print -quit)"
+test -n "$jar_path"
+mv "$jar_path" "$install_root/apktool.jar"
+mkdir -p "$install_root/bin"
+printf '%s\n' '#!/usr/bin/env bash' 'exec java -Xmx1024M -Dfile.encoding=utf-8 -jar "$(dirname "$(readlink -f "$0")")/../apktool.jar" "$@"' >"$install_root/bin/apktool"
+chmod 0755 "$install_root/bin/apktool"
+'''
+
+[tools."http:android-sdk"]
+version = "22.0"
+url = "https://dl.google.com/android/repository/commandlinetools-linux-15859902_latest.zip"
+checksum = "sha256:4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583"
+bin_path = "cmdline-tools/22.0/bin"
+depends = ["java"]
+postinstall = '''
+install_root="${MISE_TOOL_INSTALL_PATH:?}"
+version_root="$install_root/cmdline-tools/22.0"
+mkdir -p "$version_root"
+mv "$install_root/bin" "$install_root/lib" "$install_root/NOTICE.txt" "$install_root/source.properties" "$version_root/"
+'''
+
+[tasks."android-sdk:licenses"]
+description = "Review and accept Android SDK component licenses"
+run = '''
+sdk_root="$(cd "$(dirname "$(command -v sdkmanager)")/../../.." && pwd)"
+sdkmanager --sdk_root="$sdk_root" --licenses
+'''
+
+[tasks."android-sdk:components"]
+description = "Install the Android 14 ARM64 emulator and analysis components persistently"
+run = '''
+sdk_root="$(cd "$(dirname "$(command -v sdkmanager)")/../../.." && pwd)"
+tool_bin="$(dirname "$(command -v sdkmanager)")"
+sdkmanager --sdk_root="$sdk_root" \
+  "build-tools;35.0.0" \
+  "emulator" \
+  "platform-tools" \
+  "platforms;android-35" \
+  "system-images;android-34;google_apis;arm64-v8a"
+ln -sfn ../../../emulator/emulator "$tool_bin/emulator"
+ln -sfn ../../../build-tools/35.0.0/aapt "$tool_bin/aapt"
+ln -sfn ../../../build-tools/35.0.0/aapt2 "$tool_bin/aapt2"
+ln -sfn ../../../build-tools/35.0.0/apksigner "$tool_bin/apksigner"
+'''

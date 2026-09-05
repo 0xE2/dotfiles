@@ -9,6 +9,7 @@ The bootstrap requires `curl` and `sha256sum`. It downloads the repository's exa
 ```bash
 ./bootstrap.sh --profile personal-dev
 ./bootstrap.sh --profile work --system
+./bootstrap.sh --profile android-lab
 ```
 
 `--system` is deliberately separate because it may invoke `sudo` through apt. Without it, bootstrap changes only user-owned state.
@@ -24,6 +25,15 @@ Run `./bootstrap.sh --help` for the complete interface. Re-running bootstrap is 
 ## Profiles and categories
 
 Profiles live under `.config/mise/profiles/`. Bootstrap selects one by linking it to the ignored `.config/mise/miserc.toml`. An explicit `--env` selection generates that local file instead. `personal` and `work` cannot be selected together because both configure Java.
+
+The `android-lab` profile keeps Android command-line and reverse-engineering tools in the persistent user home of a Qubes AppVM. After bootstrapping it, review the Android SDK licenses and install the emulator components explicitly:
+
+```bash
+mise run android-sdk:licenses
+mise run android-sdk:components
+```
+
+The component task installs an Android 14 ARM64 system image, the emulator, platform tools, API 35 platform files, and build tools below mise's persistent Android SDK installation.
 
 Mise's `pipx:` backend uses `uv tool install` whenever uv is available. Mise owns persistent Python CLI declarations; `pipxu` remains available for ad hoc tools and the `pipxu-shell` helper.
 

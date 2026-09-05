@@ -23,7 +23,7 @@ export MISE_SAFE=1
 
 # Personal and work contain mutually exclusive Java distributions, so lock
 # them in separate configuration passes.
-MISE_ENV="shell-base,shell-extended,languages,personal,devops,devsecops" \
+MISE_ENV="shell-base,shell-extended,languages,personal,devops,devsecops,android-lab" \
   "$mise_bin" lock --global --bump --platform linux-x64,linux-arm64
 MISE_ENV="work" \
   "$mise_bin" lock --global --bump --platform linux-x64,linux-arm64
