@@ -5,6 +5,9 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
+export PATH="$HOME/go/bin:$HOME/.local/bin:$HOME/bin:$PATH"
+
+# Activate mise after extending PATH so its managed tools take precedence
 if [[ -x $HOME/.local/bin/mise ]]; then
   eval "$("$HOME/.local/bin/mise" activate zsh)"
 fi
@@ -26,8 +29,6 @@ WORDCHARS=${WORDCHARS//\/}
 
 # hide EOL sign ('%')
 PROMPT_EOL_MARK=""
-
-export PATH="$HOME/go/bin:$HOME/.local/bin:$HOME/bin:$PATH"
 
 # Configure completion system
 
