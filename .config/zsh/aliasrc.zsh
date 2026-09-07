@@ -9,6 +9,7 @@ alias l='ls -CF'
 alias m='micro'
 alias ts='tailscale'
 alias k='kubectl'
+alias mr='mise run'
 
 alias kctx='kubectx'
 alias kns='kubens'
