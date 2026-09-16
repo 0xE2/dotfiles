@@ -1,4 +1,9 @@
 [tools]
 age = "latest"
-"pipx:mitmproxy" = { version = "latest", depends = ["python", "uv"] }
+"pipx:mitmproxy" = {
+    version = "latest",
+    depends = ["python", "uv"],
+    # Used by mitmproxy-mcp
+    uvx_args = "--with aiohttp",
+}
 sops = "latest"

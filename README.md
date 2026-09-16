@@ -1,6 +1,6 @@
 # Linux dotfiles and user toolchain
 
-This repository configures a user-wide Linux shell environment and installs versioned tools with [mise](https://mise.jdx.dev/). It targets x86-64 and ARM64 hosts running WSL2, Ubuntu, or Qubes OS. Windows files in the repository are standalone host utilities; Windows itself is not a bootstrap target.
+This repository configures a user-wide Linux shell environment and installs versioned tools with [mise](https://mise.jdx.dev/). It targets x86-64 and ARM64 hosts running WSL2, Ubuntu, or Qubes OS.
 
 ## Quick start
 
@@ -22,20 +22,9 @@ For a one-off combination instead of a committed profile:
 
 Run `./bootstrap.sh --help` for the complete interface. Re-running bootstrap is safe. It refuses unmanaged dotfile conflicts, dirty plugin repositories, and invalid or contradictory environment selections.
 
-## Profiles and categories
+## Mise toolchain
 
-Profiles live under `.config/mise/profiles/`. Bootstrap selects one by linking it to the ignored `.config/mise/miserc.toml`. An explicit `--env` selection generates that local file instead. `personal` and `work` cannot be selected together because both configure Java.
-
-The `android-lab` profile keeps Android command-line and reverse-engineering tools in the persistent user home of a Qubes AppVM. After bootstrapping it, review the Android SDK licenses and install the emulator components explicitly:
-
-```bash
-mise run android-sdk:licenses
-mise run android-sdk:components
-```
-
-The component task installs an Android 14 ARM64 system image, the emulator, platform tools, API 35 platform files, and build tools below mise's persistent Android SDK installation.
-
-Mise's `pipx:` backend uses `uv tool install` whenever uv is available. Mise owns persistent Python CLI declarations; `pipxu` remains available for ad hoc tools and the `pipxu-shell` helper.
+Mise profiles, environment categories, lock updates, bootstrap version updates, and Python CLI tool details live in [`.config/mise/README.md`](./.config/mise/README.md).
 
 ## Dotfile linking
 
@@ -77,21 +66,7 @@ Inspect installed tools and cache drift without modifying the active snapshot:
 
 Zsh loads generated functions lazily through `fpath` before distro completions, then sources broader integrations before applying tracked keybindings. Bash loads canonical-command completions when the optional `bash-completion` system package is available. Add new tools to the reviewed registry in [`scripts/sync_shell_integrations.sh`](./scripts/sync_shell_integrations.sh);.
 
-## Updates and validation
-
-Fuzzy tool constraints are held back for seven days. Committed lockfiles record the resolved downloads and checksums for Linux x86-64 and ARM64. Update them deliberately with the repository's pinned mise version:
-
-```bash
-./scripts/update_mise_locks.sh
-```
-
-Mise itself is a bootstrap dependency rather than a tool lock. Its version and Linux x86-64/ARM64 checksums live in `.mise-bootstrap.env`. Update that manifest to the latest stable immutable GitHub release with:
-
-```bash
-./scripts/update_mise_bootstrap.sh
-```
-
-The updater reads the latest version from `mise version --json`, obtains both asset digests from the GitHub Releases API, and changes only the manifest. It does not install the new binary or create a Git commit. The seven-day tool release delay does not apply to mise itself.
+## Validation
 
 After an update, run:
 

@@ -1,0 +1,4 @@
+[tools]
+"npm:@openai/codex" = "latest"
+"npm:@anthropic-ai/claude-code" = "latest"
+"npm:@fission-ai/openspec" = "latest"

@@ -4,3 +4,6 @@ min_version = "2026.7.13"
 lockfile = true
 minimum_release_age = "7d"
 system_deps = "warn"
+
+[settings.go]
+set_gobin = false
